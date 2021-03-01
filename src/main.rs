@@ -11,6 +11,8 @@ mod gamelog;
 pub use gamelog::*;
 mod gui;
 pub use gui::*;
+mod inventory_system;
+pub use inventory_system::*;
 mod map;
 pub use map::*;
 mod map_indexing_system;
@@ -49,6 +51,10 @@ fn main () -> rltk::BError {
     gs.ecs.register::<CombatStats>();
     gs.ecs.register::<WantsToMelee>();
     gs.ecs.register::<SufferDamage>();
+    gs.ecs.register::<Item>();
+    gs.ecs.register::<Potion>();
+    gs.ecs.register::<InBackpack>();
+    gs.ecs.register::<WantsToPickupItem>();
 
     let map: Map = Map::new_map_rooms_and_corridors();
     let (player_x, player_y) = map.rooms[0].center();
@@ -78,7 +84,7 @@ fn main () -> rltk::BError {
 }
 
 #[derive(PartialEq, Copy, Clone)]
-pub enum RunState { AwaitingInput, PreRun, PlayerTurn, MonsterTurn }
+pub enum RunState { AwaitingInput, PreRun, PlayerTurn, MonsterTurn, ShowInventory }
 
 pub struct State {
     pub ecs: World
@@ -96,6 +102,10 @@ impl State {
         melee.run_now(&self.ecs);
         let mut damage = DamageSystem {};
         damage.run_now(&self.ecs);
+        let mut pickup = ItemCollectionSystem {};
+        pickup.run_now(&self.ecs);
+        let mut potions = PotionUseSystem {};
+        potions.run_now(&self.ecs);
         self.ecs.maintain();
     }
 }
@@ -103,6 +113,8 @@ impl State {
 impl GameState for State {
     fn tick(&mut self, ctx: &mut Rltk) {
         ctx.cls();
+        draw_map(&self.ecs, ctx);
+
         let mut new_runstate;
         {
             let runstate = self.ecs.fetch::<RunState>();
@@ -113,6 +125,7 @@ impl GameState for State {
         match new_runstate {
             RunState::PreRun => {
                 self.run_systems();
+                self.ecs.maintain();
                 new_runstate = RunState::AwaitingInput;
             }
             RunState::AwaitingInput => {
@@ -120,11 +133,28 @@ impl GameState for State {
             }
             RunState::PlayerTurn => {
                 self.run_systems();
+                self.ecs.maintain();
                 new_runstate = RunState::MonsterTurn;
             }
             RunState::MonsterTurn => {
                 self.run_systems();
+                self.ecs.maintain();
                 new_runstate = RunState::AwaitingInput;
+            }
+            RunState::ShowInventory => {
+                let result = gui::show_inventory(self, ctx);
+                match result.0 {
+                    gui::ItemMenuResult::Cancel => new_runstate = RunState::AwaitingInput,
+                    gui::ItemMenuResult::NoResponse => {}
+                    gui::ItemMenuResult::Selected => {
+                        let item_ent = result.1.unwrap();
+                        let mut intent = self.ecs.write_storage::<WantsToDrinkPotion>();
+                        intent
+                            .insert(*self.ecs.fetch::<Entity>(), WantsToDrinkPotion {potion: item_ent})
+                            .expect("Unable to insert intent");
+                        new_runstate = RunState::PlayerTurn;
+                    }
+                }
             }
         }
 
@@ -134,8 +164,6 @@ impl GameState for State {
         }
 
         damage_system::delete_the_dead(&mut self.ecs);
-
-        draw_map(&self.ecs, ctx);
 
         let positions = self.ecs.read_storage::<Position>();
         let renderables = self.ecs.read_storage::<Renderable>();
