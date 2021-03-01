@@ -34,6 +34,10 @@ impl<'a> System<'a> for MonsterAI {
             mut wants_to_melee
         ) = data;
 
+        // If it's not the monster's turn, immediately return.
+        if *runstate != RunState::MonsterTurn { return; }
+
+        // Else, do the AI.
         for (ent, mut viewshed, _monster, mut pos)
                 in (&entities, &mut viewshed, &monster, &mut position).join() {
             let distance = rltk::DistanceAlg::Pythagoras.distance2d(
