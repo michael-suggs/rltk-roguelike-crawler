@@ -37,9 +37,11 @@ pub struct Viewshed {
     pub dirty: bool,
 }
 
+/// Component tag indicating entity is a monster.
 #[derive(Component)]
 pub struct Monster {}
 
+/// Allows for naming of entities.
 #[derive(Component, Debug)]
 pub struct Name {
     pub name: String,
