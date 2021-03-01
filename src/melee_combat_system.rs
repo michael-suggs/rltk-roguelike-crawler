@@ -1,6 +1,6 @@
 use rltk::{console};
 use specs::prelude::*;
-use super::{CombatStats, Name, SufferDamage, WantsToMelee};
+use super::{CombatStats, GameLog, Name, SufferDamage, WantsToMelee};
 
 /// Handle for our melee combat system.
 pub struct MeleeCombatSystem {}
@@ -8,6 +8,7 @@ pub struct MeleeCombatSystem {}
 impl<'a> System<'a> for MeleeCombatSystem {
     type SystemData = (
         Entities<'a>,
+        WriteExpect<'a, GameLog>,
         WriteStorage<'a, WantsToMelee>,
         ReadStorage<'a, Name>,
         ReadStorage<'a, CombatStats>,
@@ -15,7 +16,8 @@ impl<'a> System<'a> for MeleeCombatSystem {
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (ent, mut melee, names, combat_stats, mut inflict_damage) = data;
+        #[allow(clippy::type_complexity)]
+        let (ent, mut log, mut melee, names, combat_stats, mut inflict_damage) = data;
 
         for (_ent, melee, name, stats) in (&ent, &melee, &names, &combat_stats).join() {
             if stats.hp > 0 {
@@ -25,9 +27,9 @@ impl<'a> System<'a> for MeleeCombatSystem {
                     let damage = i32::max(0, stats.power - target_stats.defense);
 
                     if damage == 0 {
-                        console::log(&format!("{} is left unscathed from {}!", &name.name, &target_name.name));
+                        log.entries.push(format!("{} is left unscathed from {}!", &name.name, &target_name.name));
                     } else {
-                        console::log(&format!("{} hits {} for {} hp.", &name.name, &target_name.name, damage));
+                        log.entries.push(format!("{} hits {} for {} hp.", &name.name, &target_name.name, damage));
                         SufferDamage::new_damage(&mut inflict_damage, melee.target, damage);
                     }
                 }
