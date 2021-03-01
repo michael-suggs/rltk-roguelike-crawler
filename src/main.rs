@@ -110,7 +110,7 @@ fn main () -> rltk::BError {
 pub enum RunState { AwaitingInput, PreRun, PlayerTurn, MonsterTurn }
 
 pub struct State {
-    pub ecs: World,
+    pub ecs: World
 }
 
 impl State {
