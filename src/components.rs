@@ -46,3 +46,7 @@ pub struct Monster {}
 pub struct Name {
     pub name: String,
 }
+
+/// Component blocks its inhabited tile.
+#[derive(Component, Debug)]
+pub struct BlocksTile {}

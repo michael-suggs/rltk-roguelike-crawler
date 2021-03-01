@@ -20,6 +20,7 @@ pub struct Map {
     pub height: i32,
     pub revealed_tiles: Vec<bool>,
     pub visible_tiles: Vec<bool>,
+    pub blocked: Vec<bool>,
 }
 
 impl Map {
@@ -27,11 +28,18 @@ impl Map {
         (y as usize * self.width as usize) + x as usize
     }
 
-    /// Determines if an index can be entered.
+    /// Determines if an index can be entered (is not blocked).
     fn is_exit_valid(&self, x: i32, y: i32) -> bool {
         if x < 1 || x > self.width-1 || y < 1 || y > self.height-1 { return false; }
         let idx = self.xy_idx(x, y);
-        self.tiles[idx as usize] != TileType::Wall
+        !self.blocked[idx]
+    }
+
+    /// Sets all wall tiles to blocking tiles--can't walk through walls.
+    pub fn populate_blocked(&mut self) {
+        for (i, tile) in self.tiles.iter_mut().enumerate() {
+            self.blocked[i] = *tile == TileType::Wall;
+        }
     }
 
     /// Places a rectangular room onto the map.
@@ -77,6 +85,7 @@ impl Map {
             height: 50,
             revealed_tiles: vec![false; 80*50],
             visible_tiles: vec![false; 80*50],
+            blocked: vec![false; 80*50],
         };
 
         const MAX_ROOMS: i32 = 30;
