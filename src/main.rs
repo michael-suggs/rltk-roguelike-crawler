@@ -23,16 +23,20 @@ mod player;
 pub use player::*;
 mod rect;
 pub use rect::*;
+mod spawner;
+pub use spawner::*;
 mod visibility_system;
-use visibility_system::VisibilitySystem;
+pub use visibility_system::VisibilitySystem;
 
 fn main () -> rltk::BError {
     use rltk::RltkBuilder;
     let mut context = RltkBuilder::simple80x50()
         .with_title("Roguelike Tutorial")
         .build()?;
+
     // Give it a retro vibe, because that's cool.
     context.with_post_scanlines(true);
+
     let mut gs = State{ ecs: World::new() };
 
     gs.ecs.register::<Position>();
@@ -49,58 +53,15 @@ fn main () -> rltk::BError {
     let map: Map = Map::new_map_rooms_and_corridors();
     let (player_x, player_y) = map.rooms[0].center();
 
-    let player_entity = gs.ecs
-        .create_entity()
-        .with(Position { x: player_x, y: player_y })
-        .with(Renderable {
-            glyph: rltk::to_cp437('@'),
-            fg: RGB::named(rltk::YELLOW),
-            bg: RGB::named(rltk::BLACK),
-        })
-        .with(Player{})
-        .with(Viewshed { visible_tiles: Vec::new(), range: 8, dirty: true })
-        .with(Name { name: "Player".to_string() })
-        .with(CombatStats {
-            max_hp: 30,
-            hp: 30,
-            defense: 2,
-            power: 5,
-        })
-        .build();
+    let player_entity = spawner::player(&mut gs.ecs, player_x, player_y);
 
     // Generate some monsters.
     // Rolls dice to determine monster type, with orcs having glyph
     // `o` and goblins having glyph `g`.
-    let mut rng = rltk::RandomNumberGenerator::new();
-    for (i,room) in map.rooms.iter().skip(1).enumerate() {
+    gs.ecs.insert(rltk::RandomNumberGenerator::new());
+    for room in map.rooms.iter().skip(1) {
         let (x,y): (i32, i32) = room.center();
-        let glyph: rltk::FontCharType;
-        let name: String;
-
-        let roll: i32 = rng.roll_dice(1, 2);
-        match roll {
-            1 => { glyph = rltk::to_cp437('g'); name = "Goblin".to_string(); }
-            _ => { glyph = rltk::to_cp437('o'); name = "Orc".to_string(); }
-        }
-
-        gs.ecs.create_entity()
-            .with(Position { x, y })
-            .with(Renderable {
-                glyph: glyph,
-                fg: RGB::named(rltk::RED),
-                bg: RGB::named(rltk::BLACK),
-            })
-            .with(Viewshed { visible_tiles: Vec::new(), range: 8, dirty: true })
-            .with(Monster {})
-            .with(Name { name: format!("{} #{}", &name, i) })
-            .with(BlocksTile {})
-            .with(CombatStats {
-                max_hp: 16,
-                hp: 16,
-                defense: 1,
-                power: 4,
-            })
-            .build();
+        spawner::random_monster(&mut gs.ecs, x, y);
     }
 
     gs.ecs.insert(map);
