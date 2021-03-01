@@ -118,13 +118,13 @@ impl BaseMap for Map {
 
 pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
     let map = ecs.fetch::<Map>();
-
     let mut y = 0;
     let mut x = 0;
 
     for (idx, tile) in map.tiles.iter().enumerate() {
         // Render a tile depending on its tile type.
         if map.revealed_tiles[idx] {
+            // `glyph` and `fg` switches based on TileType.
             let glyph: FontCharType;
             let mut fg: RGB;
             match tile {
@@ -137,6 +137,9 @@ pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
                     fg = RGB::from_f32(0., 1., 0.);
                 }
             }
+
+            // If tile isn't currently visible (but has been encountered),
+            // render it in greyscale.
             if !map.visible_tiles[idx] { fg = fg.to_greyscale() }
             ctx.set(x, y, fg, RGB::from_f32(0., 0., 0.), glyph);
         }
