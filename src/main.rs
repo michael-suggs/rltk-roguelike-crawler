@@ -5,10 +5,14 @@ use specs_derive::Component;
 
 mod components;
 pub use components::*;
+mod damage_system;
+pub use damage_system::*;
 mod map;
 pub use map::*;
 mod map_indexing_system;
 pub use map_indexing_system::*;
+mod melee_combat_system;
+pub use melee_combat_system::*;
 mod monster_ai_system;
 pub use monster_ai_system::*;
 mod player;
@@ -33,9 +37,30 @@ fn main () -> rltk::BError {
     gs.ecs.register::<Name>();
     gs.ecs.register::<BlocksTile>();
     gs.ecs.register::<CombatStats>();
+    gs.ecs.register::<WantsToMelee>();
+    gs.ecs.register::<SufferDamage>();
 
     let map: Map = Map::new_map_rooms_and_corridors();
     let (player_x, player_y) = map.rooms[0].center();
+
+    let player_entity = gs.ecs
+        .create_entity()
+        .with(Position { x: player_x, y: player_y })
+        .with(Renderable {
+            glyph: rltk::to_cp437('@'),
+            fg: RGB::named(rltk::YELLOW),
+            bg: RGB::named(rltk::BLACK),
+        })
+        .with(Player{})
+        .with(Viewshed { visible_tiles: Vec::new(), range: 8, dirty: true })
+        .with(Name { name: "Player".to_string() })
+        .with(CombatStats {
+            max_hp: 30,
+            hp: 30,
+            defense: 2,
+            power: 5,
+        })
+        .build();
 
     // Generate some monsters.
     // Rolls dice to determine monster type, with orcs having glyph
@@ -72,28 +97,11 @@ fn main () -> rltk::BError {
             .build();
     }
 
-    gs.ecs
-        .create_entity()
-        .with(Position { x: player_x, y: player_y })
-        .with(Renderable {
-            glyph: rltk::to_cp437('@'),
-            fg: RGB::named(rltk::YELLOW),
-            bg: RGB::named(rltk::BLACK),
-        })
-        .with(Player{})
-        .with(Viewshed { visible_tiles: Vec::new(), range: 8, dirty: true })
-        .with(Name { name: "Player".to_string() })
-        .with(CombatStats {
-            max_hp: 30,
-            hp: 30,
-            defense: 2,
-            power: 5,
-        })
-        .build();
-
     gs.ecs.insert(map);
-    // Gives a readily accessible handle on the player's position.
+    // Gives a readily accessible handle on the player and their position.
     gs.ecs.insert(Point::new(player_x, player_y));
+    gs.ecs.insert(player_entity);
+    gs.ecs.insert(RunState::Paused);
 
     rltk::main_loop(context, gs)
 }
@@ -114,6 +122,10 @@ impl State {
         mob.run_now(&self.ecs);
         let mut mapindex = MapIndexingSystem {};
         mapindex.run_now(&self.ecs);
+        let mut melee = MeleeCombatSystem {};
+        melee.run_now(&self.ecs);
+        let mut damage = DamageSystem {};
+        damage.run_now(&self.ecs);
         self.ecs.maintain();
     }
 }
@@ -128,6 +140,8 @@ impl GameState for State {
         } else {
             self.runstate = player_input(self, ctx);
         }
+
+        damage_system::delete_the_dead(&mut self.ecs);
 
         draw_map(&self.ecs, ctx);
 

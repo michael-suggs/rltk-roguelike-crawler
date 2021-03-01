@@ -1,23 +1,32 @@
 use rltk::{console, Point, Rltk, VirtualKeyCode};
 use specs::prelude::*;
-use super::{CombatStats, Map, Position, Player, RunState, State, TileType, Viewshed};
+use super::{CombatStats, Map, Position, Player, RunState, State, TileType, Viewshed, WantsToMelee};
 use std::cmp::{min, max};
 
 pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
     let mut positions = ecs.write_storage::<Position>();
     let mut players = ecs.write_storage::<Player>();
     let mut viewsheds = ecs.write_storage::<Viewshed>();
-    let combat_stats = ecs.read_storage::<CombatStats>();
     let map = ecs.fetch::<Map>();
 
-    for (_player, pos, viewshed) in (&mut players, &mut positions, &mut viewsheds).join() {
-        let dest_idx = map.xy_idx(pos.x + delta_x, pos.y + delta_y);
+    let combat_stats = ecs.read_storage::<CombatStats>();
+    let entities = ecs.entities();
+    let mut wants_to_melee = ecs.write_storage::<WantsToMelee>();
+
+    for (ent, _player, pos, viewshed)
+            in (&entities, &mut players, &mut positions, &mut viewsheds).join() {
+        let (new_x, new_y) = (pos.x + delta_x, pos.y+ delta_y);
+        if new_x < 1 || new_x > map.width - 1 || new_y < 1 || new_y > map.height - 1 { return; }
+        let dest_idx = map.xy_idx(new_x, new_y);
 
         for potential_target in map.tile_content[dest_idx].iter() {
             let target = combat_stats.get(*potential_target);
             match target {
                 None => {}
                 Some(t) => {
+                    wants_to_melee
+                        .insert(ent, WantsToMelee { target: *potential_target })
+                        .expect("Add target failed.");
                     // Attack it!
                     console::log(&format!("I bite my thumb at you, good sir!"));
                     return; // don't move after an attack

@@ -25,6 +25,10 @@ pub struct Map {
 }
 
 impl Map {
+    pub fn in_bounds(&self, x: i32, d_x: i32, y: i32, d_y: i32) -> bool {
+        x + d_x >= 1 && x + d_x < self.width - 1 && y + d_y >= 1 && y + d_y < self.height - 1
+    }
+
     pub fn xy_idx(&self, x: i32, y: i32) -> usize {
         (y as usize * self.width as usize) + x as usize
     }
