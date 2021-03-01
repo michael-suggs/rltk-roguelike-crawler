@@ -7,6 +7,10 @@ mod components;
 pub use components::*;
 mod damage_system;
 pub use damage_system::*;
+mod gamelog;
+pub use gamelog::*;
+mod gui;
+pub use gui::*;
 mod map;
 pub use map::*;
 mod map_indexing_system;
@@ -101,6 +105,11 @@ fn main () -> rltk::BError {
     // Gives a readily accessible handle on the player and their position.
     gs.ecs.insert(Point::new(player_x, player_y));
     gs.ecs.insert(player_entity);
+    // Init the game log, inserting as a resource.
+    gs.ecs.insert(gamelog::GameLog {
+        entries: vec!["Welcome to Rusty Roguelike!".to_string()]
+    });
+    // Game starts in prerun state to set up systems before beginning.
     gs.ecs.insert(RunState::PreRun);
 
     rltk::main_loop(context, gs)
@@ -176,5 +185,7 @@ impl GameState for State {
                 ctx.set(pos.x, pos.y, render.fg, render.bg, render.glyph);
             }
         }
+
+        gui::draw_ui(&self.ecs, ctx);
     }
 }
