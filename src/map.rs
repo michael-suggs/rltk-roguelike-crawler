@@ -3,9 +3,9 @@ use specs::prelude::*;
 use std::cmp::{min, max};
 use super::{Player, Rect, Viewshed};
 
-const MAPWIDTH: usize = 80;
-const MAPHEIGHT: usize = 43;
-const MAPCOUNT: usize = MAPHEIGHT * MAPWIDTH;
+pub const MAPWIDTH: usize = 80;
+pub const MAPHEIGHT: usize = 43;
+pub const MAPCOUNT: usize = MAPHEIGHT * MAPWIDTH;
 
 /// Enum differentiating floor tiles from wall tiles.
 #[derive(PartialEq, Copy, Clone)]

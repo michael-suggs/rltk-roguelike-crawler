@@ -1,6 +1,9 @@
 use rltk::{RGB, RandomNumberGenerator};
 use specs::prelude::*;
-use super::{BlocksTile, CombatStats, Monster, Name, Player, Position, Renderable, Viewshed};
+use super::{BlocksTile, CombatStats, MAPWIDTH, Monster, Name, Player, Position, Rect, Renderable, Viewshed};
+
+const MAX_MONSTERS: i32 = 4;
+const MAX_ITEMS: i32 = 2;
 
 /// Spawns the player and returns its entity.
 pub fn player(ecs: &mut World, player_x: i32, player_y: i32) -> Entity {
@@ -70,4 +73,40 @@ fn monster<S: ToString>(
             power: 4,
         })
         .build();
+}
+
+/// Spawns stuff in a room.
+pub fn spawn_room(ecs: &mut World, room: &Rect) {
+    let mut monster_spawn_points: Vec<usize> = Vec::new();
+
+    {
+        // Get a random number of monsters to spawn in the room.
+        let mut rng = ecs.write_resource::<RandomNumberGenerator>();
+        let num_monsters = rng.roll_dice(1, MAX_MONSTERS);
+
+        // Get indices to spawn the monsters at.
+        for _ in 0..num_monsters {
+            let mut added = false;
+            // Try to get an unoccupied spawn point.
+            while !added {
+                let x = (room.x1 + rng.roll_dice(1, i32::abs(room.x2 - room.x1))) as usize;
+                let y = (room.y1 + rng.roll_dice(1, i32::abs(room.y2 - room.y1))) as usize;
+
+                let idx = (y * MAPWIDTH) + x;
+                // If spawn point is unoccupied, add it as a new spawn point
+                // then continue to the next.
+                if !monster_spawn_points.contains(&idx) {
+                    monster_spawn_points.push(idx);
+                    added = true;
+                }
+            }
+        }
+    }
+
+    // Spawn monsters at each of the spawn points.
+    for idx in monster_spawn_points.iter() {
+        let x = *idx % MAPWIDTH;
+        let y = *idx / MAPWIDTH;
+        random_monster(ecs, x as i32, y as i32);
+    }
 }
