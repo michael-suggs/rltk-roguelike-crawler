@@ -1,6 +1,6 @@
-use rltk::{VirtualKeyCode, Rltk};
+use rltk::{Point, Rltk, VirtualKeyCode};
 use specs::prelude::*;
-use super::{Map, Position, Player, State, TileType, Viewshed};
+use super::{Map, Position, Player, RunState, State, TileType, Viewshed};
 use std::cmp::{min, max};
 
 pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
@@ -18,19 +18,24 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
 
             // If player was moved, viewshed needs to be recalculated.
             viewshed.dirty = true;
+
+            // Update the player's position resource.
+            let mut ppos = ecs.write_resource::<Point>();
+            ppos.x = pos.x;
+            ppos.y = pos.y;
         }
     }
 }
 
-pub fn player_input(gs: &mut State, ctx: &mut Rltk) {
+pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState{
     match ctx.key {
-        None => {}
+        None => { return RunState::Paused }
         Some(key) => match key {
             VirtualKeyCode::Left => try_move_player(-1, 0, &mut gs.ecs),
             VirtualKeyCode::Right => try_move_player(1, 0, &mut gs.ecs),
             VirtualKeyCode::Up => try_move_player(0, -1, &mut gs.ecs),
             VirtualKeyCode::Down => try_move_player(0, 1, &mut gs.ecs),
-            _ => {}
+            _ => { return RunState::Paused }
         },
-    }
+    } RunState::Running
 }
