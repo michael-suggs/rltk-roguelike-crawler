@@ -43,7 +43,7 @@ pub fn delete_the_dead(ecs: &mut World) {
                             log.entries.push(format!("{} is dead", &victim_name.name));
                         } dead.push(ent)
                     }
-                    Some(_) => console::log("You are dead."),
+                    Some(_) => {}
                 }
             }
         }

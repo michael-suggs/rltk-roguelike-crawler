@@ -52,6 +52,7 @@ pub struct Name {
 #[derive(Component, Debug)]
 pub struct BlocksTile {}
 
+/// Component holding combat stats for an entity.
 #[derive(Component, Debug)]
 pub struct CombatStats {
     pub max_hp: i32,
@@ -63,6 +64,21 @@ pub struct CombatStats {
 #[derive(Component, Debug, Clone)]
 pub struct WantsToMelee {
     pub target: Entity
+}
+
+#[derive(Component, Debug)]
+pub struct Ranged {
+    pub range: i32
+}
+
+#[derive(Component, Debug)]
+pub struct AreaOfEffect {
+    pub radius: i32
+}
+
+#[derive(Component, Debug)]
+pub struct InflictsDamage {
+    pub damage: i32
 }
 
 #[derive(Component, Debug)]
@@ -81,10 +97,23 @@ impl SufferDamage {
     }
 }
 
+/// Intent. Taken on when an entity tries to pick up an item.
 #[derive(Component, Debug, Clone)]
 pub struct WantsToPickupItem {
     pub collected_by: Entity,
     pub item: Entity
+}
+
+/// Intent. Taken on when an entity tries to drop an item.
+#[derive(Component, Debug, Clone)]
+pub struct WantsToDropItem {
+    pub item: Entity
+}
+
+#[derive(Component, Debug, Clone)]
+pub struct WantsToUseItem {
+    pub item: Entity,
+    pub target: Option<rltk::Point>
 }
 
 #[derive(Component, Debug, Clone)]
@@ -92,20 +121,18 @@ pub struct InBackpack {
     pub owner: Entity
 }
 
+/// Flag: an item.
 #[derive(Component, Debug)]
 pub struct Item {}
 
+/// Flag: consumable item.
+///
+/// A component with this flag will be destroyed on use.
 #[derive(Component, Debug)]
-pub struct Potion {
+pub struct Consumable {}
+
+/// Flag: an item that provides healing.
+#[derive(Component, Debug)]
+pub struct ProvidesHealing {
     pub heal_amount: i32
-}
-
-#[derive(Component, Debug)]
-pub struct WantsToDrinkPotion {
-    pub potion: Entity
-}
-
-#[derive(Component, Debug, Clone)]
-pub struct WantsToDropItem {
-    pub item: Entity
 }
