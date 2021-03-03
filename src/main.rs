@@ -142,6 +142,7 @@ impl State {
         let player = self.ecs.read_storage::<Player>();
         let player_ent = self.ecs.fetch::<Entity>();
         let backpack = self.ecs.read_storage::<InBackpack>();
+        let equipped = self.ecs.read_storage::<Equipped>();
 
         let mut to_delete: Vec<Entity> = Vec::new();
         for ent in entities.join() {
@@ -152,10 +153,19 @@ impl State {
                 should_delete = false;
             };
 
+            // Don't clear the player's backpack
             if let Some(bp) = backpack.get(ent) {
                 if bp.owner == *player_ent { should_delete = false; }
             };
 
+            // Don't delete the player's equipped items
+            if let Some(eq) = equipped.get(ent) {
+                if eq.owner == *player_ent {
+                    should_delete = false;
+                }
+            }
+
+            // If none of the above, safe to delete
             if should_delete { to_delete.push(ent); }
         }
 
