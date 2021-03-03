@@ -1,4 +1,4 @@
-use rltk::{Console, Point, RGB, Rltk, VirtualKeyCode};
+use rltk::{Console, Point, RGB, Rltk, VirtualKeyCode, YELLOW};
 use specs::prelude::*;
 use crate::saveload_system::does_save_exist;
 
@@ -95,11 +95,17 @@ pub fn draw_ui(ecs: &World, ctx: &mut Rltk) {
 
     let combat_stats = ecs.read_storage::<CombatStats>();
     let players = ecs.read_storage::<Player>();
+    let map = ecs.fetch::<Map>();
+    let depth = format!("Depth: {}", map.depth);
+
+    ctx.print_color(2, 43, RGB::named(rltk::YELLOW),
+                 RGB::named(rltk::BLACK), &depth);
 
     for (_player, stats) in (&players, &combat_stats).join() {
         let health = format!(" HP: {} / {} ", stats.hp, stats.max_hp);
-        ctx.print_color(12, 43, RGB::named(rltk::YELLOW), RGB::named(rltk::BLACK), &health);
-        ctx.draw_bar_horizontal(23, 43, 51, stats.hp, stats.max_hp,
+        ctx.print_color(12, 43, RGB::named(rltk::YELLOW),
+                     RGB::named(rltk::BLACK), &health);
+        ctx.draw_bar_horizontal(28, 43, 51, stats.hp, stats.max_hp,
             RGB::named(rltk::RED), RGB::named(rltk::BLACK));
     }
 

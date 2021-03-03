@@ -92,6 +92,12 @@ pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState{
             VirtualKeyCode::Numpad3
             | VirtualKeyCode::N
             | VirtualKeyCode::Z => try_move_player(-1, 1, &mut gs.ecs),
+            // Level changes
+            VirtualKeyCode::Period => {
+                if try_next_level(&mut gs.ecs) {
+                    return RunState::NextLevel;
+                }
+            },
             // Picks up an item (if there is one).
             VirtualKeyCode::G => get_item(&mut gs.ecs),
             // Shows the inventory screen.
@@ -133,5 +139,19 @@ fn get_item(ecs: &mut World) {
                 .insert(*player_ent, WantsToPickupItem { collected_by: *player_ent, item })
                 .expect("Unable to insert want to pickup");
         }
+    }
+}
+
+fn try_next_level(ecs: &mut World) -> bool {
+    let map = ecs.fetch::<Map>();
+    let player_pos = ecs.fetch::<Point>();
+    let player_idx = map.xy_idx(player_pos.x, player_pos.y);
+
+    if map.tiles[player_idx] == TileType::DownStairs {
+        true
+    } else {
+        let mut log = ecs.fetch_mut::<GameLog>();
+        log.entries.push("There is no way down from here.".to_string());
+        false
     }
 }
