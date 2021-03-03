@@ -1,6 +1,7 @@
 use rltk::{RGB, RandomNumberGenerator};
 use specs::{prelude::*, saveload::{MarkedBuilder, SimpleMarker}};
-use super::{components::*, Rect, MAPWIDTH};
+use std::collections::HashMap;
+use super::{components::*, random_table::RandomTable, Rect, MAPWIDTH};
 
 const MAX_MONSTERS: i32 = 4;
 const MAX_ITEMS: i32 = 2;
@@ -29,18 +30,77 @@ pub fn player(ecs: &mut World, player_x: i32, player_y: i32) -> Entity {
         .build()
 }
 
-/// Randomly selects a monster type and generates it at `(x,y)`.
-pub fn random_monster(ecs: &mut World, x: i32, y: i32) {
-    let roll: i32;
+/// Spawns stuff in a room.
+pub fn spawn_room(ecs: &mut World, room: &Rect, map_depth: i32) {
+    let spawn_table = room_table();
+    let mut spawn_points: HashMap<usize, String> = HashMap::new();
+
+    // Get some spawn points (scoped to appease the borrow checker).
     {
+        // Get a random number of monsters to spawn in the room.
         let mut rng = ecs.write_resource::<RandomNumberGenerator>();
-        roll = rng.roll_dice(1, 2);
+        let num_spawns = rng.roll_dice(1, MAX_MONSTERS + 3) + (map_depth - 1) - 3;
+
+        // Get spawn points for the monsters in the room.
+        for _ in 0..num_spawns {
+            let mut added = false;
+            let mut tries = 0;
+
+            // Try to get an unoccupied spawn point.
+            while !added && tries < 20 {
+                let x = (room.x1 + rng.roll_dice(1, i32::abs(room.x2 - room.x1))) as usize;
+                let y = (room.y1 + rng.roll_dice(1, i32::abs(room.y2 - room.y1))) as usize;
+                let idx = (y * MAPWIDTH) + x;
+
+                // If spawn point is unoccupied, add it as a new spawn point
+                // then continue to the next.
+                if !spawn_points.contains_key(&idx) {
+                    spawn_points.insert(idx, spawn_table.roll(&mut rng));
+                    added = true;
+                } else {
+                    tries += 1
+                }
+            }
+        }
     }
-    match roll {
-        1 => { orc(ecs, x, y) }
-        _ => { goblin(ecs, x, y) }
+
+    // Spawn monsters and items, matching on our rolls.
+    for spawn in spawn_points.iter() {
+        let (x, y) = ((*spawn.0 % MAPWIDTH) as i32, (*spawn.0 / MAPWIDTH) as i32);
+        match spawn.1.as_ref() {
+            "Goblin" => goblin(ecs, x, y),
+            "Orc" => orc(ecs, x, y),
+            "Health Potion" => potion_health(ecs, x, y),
+            "Fireball Scroll" => scroll_fireball(ecs, x, y),
+            "Confusion Scroll" => scroll_confusion(ecs, x, y),
+            "Magic Missile Scroll" => scroll_magic_missile(ecs, x, y),
+            _ => {}
+        }
     }
 }
+
+fn room_table() -> RandomTable {
+    RandomTable::new()
+        .add("Goblin", 10)
+        .add("Orc", 1)
+        .add("Health Potion", 7)
+        .add("Fireball Scroll", 2)
+        .add("Confusion Scroll", 2)
+        .add("Magic Missile Scroll", 4)
+}
+
+// /// Randomly selects a monster type and generates it at `(x,y)`.
+// pub fn random_monster(ecs: &mut World, x: i32, y: i32) {
+//     let roll: i32;
+//     {
+//         let mut rng = ecs.write_resource::<RandomNumberGenerator>();
+//         roll = rng.roll_dice(1, 2);
+//     }
+//     match roll {
+//         1 => { orc(ecs, x, y) }
+//         _ => { goblin(ecs, x, y) }
+//     }
+// }
 
 /// Makes an orc.
 fn orc(ecs: &mut World, x: i32, y: i32) {
@@ -79,82 +139,19 @@ fn monster<S: ToString>(
         .build();
 }
 
-/// Spawns stuff in a room.
-pub fn spawn_room(ecs: &mut World, room: &Rect) {
-    let mut monster_spawn_points: Vec<usize> = Vec::new();
-    let mut item_spawn_points: Vec<usize> = Vec::new();
-    // Get some spawn points (scoped to appease the borrow checker).
-    {
-        // Get a random number of monsters to spawn in the room.
-        let mut rng = ecs.write_resource::<RandomNumberGenerator>();
-        let num_monsters = rng.roll_dice(1, MAX_MONSTERS + 2) - 3;
-        let num_items = rng.roll_dice(1, MAX_ITEMS + 2) - 3;
-
-        // Get spawn points for the monsters in the room.
-        for _ in 0..num_monsters {
-            let mut added = false;
-            // Try to get an unoccupied monster spawn point.
-            while !added {
-                let x = (room.x1 + rng.roll_dice(1, i32::abs(room.x2 - room.x1))) as usize;
-                let y = (room.y1 + rng.roll_dice(1, i32::abs(room.y2 - room.y1))) as usize;
-
-                let idx = (y * MAPWIDTH) + x;
-                // If spawn point is unoccupied, add it as a new spawn point
-                // then continue to the next.
-                if !monster_spawn_points.contains(&idx) {
-                    monster_spawn_points.push(idx);
-                    added = true;
-                }
-            }
-        }
-
-        // Get spawn points for the items in the room.
-        for _ in 0..num_items {
-            let mut added = false;
-            // Try to get an unoccupied item spawn point.
-            while !added {
-                let x = (room.x1 + rng.roll_dice(1, i32::abs(room.x2 - room.x1))) as usize;
-                let y = (room.y1 + rng.roll_dice(1, i32::abs(room.y2 - room.y1))) as usize;
-
-                let idx = (y * MAPWIDTH) + x;
-                // If spawn point is unoccupied, add it as a new spawn point
-                // then continue to the next.
-                if !item_spawn_points.contains(&idx) {
-                    item_spawn_points.push(idx);
-                    added = true;
-                }
-            }
-        }
-    }
-
-    // Spawn monsters at each of the spawn points.
-    for idx in monster_spawn_points.iter() {
-        let x = *idx % MAPWIDTH;
-        let y = *idx / MAPWIDTH;
-        random_monster(ecs, x as i32, y as i32);
-    }
-
-    // Spawn monsters at each of the spawn points.
-    for idx in item_spawn_points.iter() {
-        let x = *idx % MAPWIDTH;
-        let y = *idx / MAPWIDTH;
-        random_item(ecs, x as i32, y as i32);
-    }
-}
-
-fn random_item(ecs: &mut World, x: i32, y: i32) {
-    let roll: i32;
-    {
-        let mut rng = ecs.write_resource::<RandomNumberGenerator>();
-        roll = rng.roll_dice(1, 4);
-    }
-    match roll {
-        1 => potion_health(ecs, x, y),
-        2 => scroll_magic_missile(ecs, x, y),
-        3 => scroll_fireball(ecs, x, y),
-        _ => scroll_confusion(ecs, x, y),
-    }
-}
+// fn random_item(ecs: &mut World, x: i32, y: i32) {
+//     let roll: i32;
+//     {
+//         let mut rng = ecs.write_resource::<RandomNumberGenerator>();
+//         roll = rng.roll_dice(1, 4);
+//     }
+//     match roll {
+//         1 => potion_health(ecs, x, y),
+//         2 => scroll_magic_missile(ecs, x, y),
+//         3 => scroll_fireball(ecs, x, y),
+//         _ => scroll_confusion(ecs, x, y),
+//     }
+// }
 
 /// Spawns a health potion at `(x,y)`.
 fn potion_health(ecs: &mut World, x: i32, y: i32) {

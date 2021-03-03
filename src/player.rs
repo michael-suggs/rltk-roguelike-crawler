@@ -1,6 +1,6 @@
 use rltk::{console, Point, Rltk, VirtualKeyCode};
 use specs::prelude::*;
-use super::{components::*, GameLog, Map, State, RunState, TileType};
+use super::{components::*, gamelog::GameLog, Map, State, RunState, TileType};
 use std::cmp::{min, max};
 
 /// Tries to move the player by `(delta_x, delta_y)` amount.
@@ -157,15 +157,29 @@ fn try_next_level(ecs: &mut World) -> bool {
     }
 }
 
+/// Skips the player's turn, healing 1 point if no monsters are around.
 fn skip_turn(ecs: &mut World) -> RunState {
     let player_ent = ecs.fetch::<Entity>();
-    let viewshed = ecs.read_storage::<Viewshed>().get(*player_ent).unwrap();
+    let viewshed_comp = ecs.read_storage::<Viewshed>();
     let monsters = ecs.read_storage::<Monster>();
     let worldmap_res = ecs.fetch::<Map>();
 
     let mut can_heal = true;
+    let viewshed = viewshed_comp.get(*player_ent).unwrap();
     for tile in viewshed.visible_tiles.iter() {
+        let idx = worldmap_res.xy_idx(tile.x, tile.y);
+        for ent_id in worldmap_res.tile_content[idx].iter() {
+            match monsters.get(*ent_id) {
+                None => {},
+                Some(_) => { can_heal = false; },
+            }
+        }
+    }
 
+    if can_heal {
+        let mut stats = ecs.write_storage::<CombatStats>();
+        let player_stats = stats.get_mut(*player_ent).unwrap();
+        player_stats.hp = i32::min(player_stats.hp + 1, player_stats.max_hp);
     }
 
     RunState::PlayerTurn

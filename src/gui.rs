@@ -1,8 +1,8 @@
-use rltk::{Console, Point, RGB, Rltk, VirtualKeyCode, YELLOW};
+use rltk::{Console, Point, RGB, Rltk, VirtualKeyCode};
 use specs::prelude::*;
 use crate::saveload_system::does_save_exist;
 
-use super::{RunState, CombatStats, GameLog, Map, Name, Player, Position,
+use super::{RunState, CombatStats, gamelog::GameLog, Map, Name, Player, Position,
     State, InBackpack, Viewshed};
 
 #[derive(PartialEq, Copy, Clone)]

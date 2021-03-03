@@ -26,6 +26,7 @@ mod map_indexing_system;
 mod melee_combat_system;
 mod monster_ai_system;
 mod player;
+mod random_table;
 mod spawner;
 mod visibility_system;
 
@@ -92,7 +93,7 @@ fn main () -> rltk::BError {
     // `o` and goblins having glyph `g`.
     gs.ecs.insert(rltk::RandomNumberGenerator::new());
     for room in map.rooms.iter().skip(1) {
-        spawner::spawn_room(&mut gs.ecs, room);
+        spawner::spawn_room(&mut gs.ecs, room, 1);
     }
 
     gs.ecs.insert(map);
@@ -174,7 +175,7 @@ impl State {
 
         // Spawn some enemies.
         for room in worldmap.rooms.iter().skip(1) {
-            spawner::spawn_room(&mut self.ecs, room);
+            spawner::spawn_room(&mut self.ecs, room, worldmap.depth + 1);
         }
 
         // Place the player and update resources.
