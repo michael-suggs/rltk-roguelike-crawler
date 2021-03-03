@@ -126,6 +126,11 @@ pub struct WantsToDropItem {
     pub item: Entity
 }
 
+#[derive(Component, Debug, ConvertSaveload, Clone)]
+pub struct WantsToRemoveItem {
+    pub item: Entity,
+}
+
 /// Intent. Taken on when an entity tries to use an item.
 #[derive(Component, Debug, ConvertSaveload)]
 pub struct WantsToUseItem {
@@ -167,6 +172,16 @@ pub struct Consumable {}
 #[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct ProvidesHealing {
     pub heal_amount: i32
+}
+
+#[derive(Component, ConvertSaveload, Clone)]
+pub struct MeleePowerBonus {
+    pub power: i32,
+}
+
+#[derive(Component, ConvertSaveload, Clone)]
+pub struct DefenseBonus {
+    pub defense: i32,
 }
 
 #[derive(Component, Debug)]

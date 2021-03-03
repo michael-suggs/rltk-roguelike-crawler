@@ -276,3 +276,32 @@ impl<'a> System<'a> for ItemDropSystem {
         wants_drop.clear();
     }
 }
+
+pub struct ItemRemoveSystem {}
+
+impl<'a> System<'a> for ItemRemoveSystem {
+    #[allow(clippy::clippy::type_complexity)]
+    type SystemData = (
+        Entities<'a>,
+        WriteStorage<'a, WantsToRemoveItem>,
+        WriteStorage<'a, Equipped>,
+        WriteStorage<'a, InBackpack>,
+    );
+
+    fn run(&mut self, data: Self::SystemData) {
+        let (
+            entities,
+            mut wants_remove,
+            mut equipped,
+            mut backpack
+        ) = data;
+
+        for (ent, to_remove) in (&entities, &wants_remove).join() {
+            equipped.remove(to_remove.item);
+            backpack
+                .insert(to_remove.item, InBackpack { owner: ent })
+                .expect("Unable to insert into backpack");
+        }
+        wants_remove.clear();
+    }
+}

@@ -1,10 +1,11 @@
 extern crate serde;
 
+use gui::ItemMenuResult;
 use rltk::{GameState, Point, Rltk};
 use specs::{prelude::*, saveload::{SimpleMarker, SimpleMarkerAllocator}};
 
 use damage_system::DamageSystem;
-use inventory_system::{ItemCollectionSystem, ItemUseSystem, ItemDropSystem};
+use inventory_system::{ItemCollectionSystem, ItemUseSystem, ItemDropSystem, ItemRemoveSystem};
 use map_indexing_system::MapIndexingSystem;
 use melee_combat_system::MeleeCombatSystem;
 use monster_ai_system::MonsterAI;
@@ -44,6 +45,7 @@ pub enum RunState {
     MainMenu { menu_selection: gui::MainMenuSelection },
     SaveGame,
     NextLevel,
+    ShowRemoveItem,
 }
 
 fn main () -> rltk::BError {
@@ -82,6 +84,8 @@ fn main () -> rltk::BError {
     gs.ecs.register::<SerializationHelper>();
     gs.ecs.register::<Equippable>();
     gs.ecs.register::<Equipped>();
+    gs.ecs.register::<MeleePowerBonus>();
+    gs.ecs.register::<DefenseBonus>();
 
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
 
@@ -134,6 +138,9 @@ impl State {
         item_use.run_now(&self.ecs);
         let mut drop_items = ItemDropSystem {};
         drop_items.run_now(&self.ecs);
+        let mut item_remove = ItemRemoveSystem {};
+        item_remove.run_now(&self.ecs);
+
         self.ecs.maintain();
     }
 
@@ -327,6 +334,21 @@ impl GameState for State {
                         let mut intent = self.ecs.write_storage::<WantsToDropItem>();
                         intent
                             .insert(*self.ecs.fetch::<Entity>(), WantsToDropItem { item: item_ent })
+                            .expect("Unable to insert intent");
+                        new_runstate = RunState::PlayerTurn;
+                    }
+                }
+            },
+            RunState::ShowRemoveItem => {
+                let result = gui::remove_item_menu(self, ctx);
+                match result.0 {
+                    gui::ItemMenuResult::Cancel => new_runstate = RunState::AwaitingInput,
+                    gui::ItemMenuResult::NoResponse => {},
+                    gui::ItemMenuResult::Selected => {
+                        let item_ent = result.1.unwrap();
+                        let mut intent = self.ecs.write_storage::<WantsToRemoveItem>();
+                        intent
+                            .insert(*self.ecs.fetch::<Entity>(), WantsToRemoveItem { item: item_ent })
                             .expect("Unable to insert intent");
                         new_runstate = RunState::PlayerTurn;
                     }

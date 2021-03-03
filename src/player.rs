@@ -51,69 +51,6 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
     }
 }
 
-/// Parses player keyboard input into actions.
-pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState{
-    match ctx.key {
-        None => { return RunState::AwaitingInput }
-        Some(key) => match key {
-            VirtualKeyCode::Left
-            | VirtualKeyCode::Numpad4
-            | VirtualKeyCode::H
-            | VirtualKeyCode::A => try_move_player(-1, 0, &mut gs.ecs),
-
-            VirtualKeyCode::Right
-            | VirtualKeyCode::Numpad6
-            | VirtualKeyCode::L
-            | VirtualKeyCode::D => try_move_player(1, 0, &mut gs.ecs),
-
-            VirtualKeyCode::Up
-            | VirtualKeyCode::Numpad8
-            | VirtualKeyCode::K
-            | VirtualKeyCode::W => try_move_player(0, -1, &mut gs.ecs),
-
-            VirtualKeyCode::Down
-            | VirtualKeyCode::Numpad2
-            | VirtualKeyCode::J
-            | VirtualKeyCode::S => try_move_player(0, 1, &mut gs.ecs),
-
-            VirtualKeyCode::Numpad7
-            | VirtualKeyCode::U
-            | VirtualKeyCode::E => try_move_player(1, -1, &mut gs.ecs),
-
-            VirtualKeyCode::Numpad9
-            | VirtualKeyCode::Y
-            | VirtualKeyCode::Q => try_move_player(-1, -1, &mut gs.ecs),
-
-            VirtualKeyCode::Numpad1
-            | VirtualKeyCode::B
-            | VirtualKeyCode::C => try_move_player(1, 1, &mut gs.ecs),
-
-            VirtualKeyCode::Numpad3
-            | VirtualKeyCode::N
-            | VirtualKeyCode::Z => try_move_player(-1, 1, &mut gs.ecs),
-            // Picks up an item (if there is one).
-            VirtualKeyCode::G => get_item(&mut gs.ecs),
-            // Shows the inventory screen.
-            VirtualKeyCode::B
-            | VirtualKeyCode::I => return RunState::ShowInventory,
-            // Shows item drop interface.
-            VirtualKeyCode::P => return RunState::ShowDropItem,
-            // Skip the player's current turn.
-            VirtualKeyCode::Space => return skip_turn(&mut gs.ecs),
-            // Level changes
-            VirtualKeyCode::Period => {
-                if try_next_level(&mut gs.ecs) {
-                    return RunState::NextLevel;
-                }
-            },
-            // Save and Quit.
-            VirtualKeyCode::Escape => return RunState::SaveGame,
-
-            _ => { return RunState::AwaitingInput }
-        },
-    } RunState::PlayerTurn
-}
-
 /// Handles item pickup.
 fn get_item(ecs: &mut World) {
     let player_pos = ecs.fetch::<Point>();
@@ -183,4 +120,68 @@ fn skip_turn(ecs: &mut World) -> RunState {
     }
 
     RunState::PlayerTurn
+}
+
+/// Parses player keyboard input into actions.
+pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState{
+    match ctx.key {
+        None => { return RunState::AwaitingInput }
+        Some(key) => match key {
+            VirtualKeyCode::Left
+            | VirtualKeyCode::Numpad4
+            | VirtualKeyCode::H
+            | VirtualKeyCode::A => try_move_player(-1, 0, &mut gs.ecs),
+
+            VirtualKeyCode::Right
+            | VirtualKeyCode::Numpad6
+            | VirtualKeyCode::L
+            | VirtualKeyCode::D => try_move_player(1, 0, &mut gs.ecs),
+
+            VirtualKeyCode::Up
+            | VirtualKeyCode::Numpad8
+            | VirtualKeyCode::K
+            | VirtualKeyCode::W => try_move_player(0, -1, &mut gs.ecs),
+
+            VirtualKeyCode::Down
+            | VirtualKeyCode::Numpad2
+            | VirtualKeyCode::J
+            | VirtualKeyCode::S => try_move_player(0, 1, &mut gs.ecs),
+
+            VirtualKeyCode::Numpad7
+            | VirtualKeyCode::U
+            | VirtualKeyCode::E => try_move_player(1, -1, &mut gs.ecs),
+
+            VirtualKeyCode::Numpad9
+            | VirtualKeyCode::Y
+            | VirtualKeyCode::Q => try_move_player(-1, -1, &mut gs.ecs),
+
+            VirtualKeyCode::Numpad1
+            | VirtualKeyCode::B
+            | VirtualKeyCode::C => try_move_player(1, 1, &mut gs.ecs),
+
+            VirtualKeyCode::Numpad3
+            | VirtualKeyCode::N
+            | VirtualKeyCode::Z => try_move_player(-1, 1, &mut gs.ecs),
+            // Picks up an item (if there is one).
+            VirtualKeyCode::G => get_item(&mut gs.ecs),
+            // Shows the inventory screen.
+            VirtualKeyCode::B
+            | VirtualKeyCode::I => return RunState::ShowInventory,
+            // Shows item drop interface.
+            VirtualKeyCode::P => return RunState::ShowDropItem,
+            VirtualKeyCode::R => return RunState::ShowRemoveItem,
+            // Skip the player's current turn.
+            VirtualKeyCode::Space => return skip_turn(&mut gs.ecs),
+            // Level changes
+            VirtualKeyCode::Period => {
+                if try_next_level(&mut gs.ecs) {
+                    return RunState::NextLevel;
+                }
+            },
+            // Save and Quit.
+            VirtualKeyCode::Escape => return RunState::SaveGame,
+
+            _ => { return RunState::AwaitingInput }
+        },
+    } RunState::PlayerTurn
 }
