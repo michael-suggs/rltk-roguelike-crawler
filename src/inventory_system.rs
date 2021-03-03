@@ -49,11 +49,30 @@ impl<'a> System<'a> for ItemUseSystem {
         WriteStorage<'a, SufferDamage>,
         ReadStorage<'a, AreaOfEffect>,
         WriteStorage<'a, Confusion>,
+        ReadStorage<'a, Equippable>,
+        WriteStorage<'a, Equipped>,
+        WriteStorage<'a, InBackpack>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (player_ent, mut log, map, entities, mut wants_use, names, consumables,
-            healing, inflicts_damage, mut combat_stats, mut suffer, aoe, mut confused) = data;
+        let (
+            player_ent,
+            mut log,
+            map,
+            entities,
+            mut wants_use,
+            names,
+            consumables,
+            healing,
+            inflicts_damage,
+            mut combat_stats,
+            mut suffer,
+            aoe,
+            mut confused,
+            equippable,
+            mut equipped,
+            mut backpack,
+        ) = data;
 
         for (ent, useitem) in (&entities, &wants_use).join() {
             let mut item_used = true;
@@ -93,6 +112,40 @@ impl<'a> System<'a> for ItemUseSystem {
                                 }
                             }
                         }
+                    }
+                }
+            }
+
+            match equippable.get(useitem.item) {
+                None => {},
+                Some(can_equip) => {
+                    let target_slot = can_equip.slot;
+                    let target = targets[0];
+
+                    let mut to_unequip: Vec<Entity> = Vec::new();
+                    for (item_ent, already_equipped, name) in (&entities, &equipped, &names).join() {
+                        if already_equipped.owner == target && already_equipped.slot == target_slot {
+                            to_unequip.push(item_ent);
+                            if target == *player_ent {
+                                log.entries.push(format!("You unequip {}.", name.name))
+                            }
+                        }
+                    }
+                    to_unequip.iter().for_each(|item| {
+                        equipped.remove(*item);
+                        backpack
+                            .insert(*item, InBackpack { owner: target })
+                            .expect("Unable to insert backpack entry");
+                    });
+                    equipped.insert(
+                        useitem.item,
+                        Equipped { owner: target, slot: target_slot }
+                    ).expect("Unable to insert equipped component");
+                    backpack.remove(useitem.item);
+                    if target == *player_ent {
+                        log.entries.push(
+                            format!("You equip the {}.", names.get(useitem.item).unwrap().name)
+                        );
                     }
                 }
             }
