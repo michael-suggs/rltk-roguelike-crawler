@@ -1,5 +1,7 @@
 use rltk::{Console, Point, RGB, Rltk, VirtualKeyCode};
 use specs::prelude::*;
+use crate::saveload_system::does_save_exist;
+
 use super::{RunState, CombatStats, GameLog, Map, Name, Player, Position,
     State, InBackpack, Viewshed};
 
@@ -13,6 +15,7 @@ pub enum MainMenuResult {
 }
 
 pub fn main_menu(gs: &mut State, ctx: &mut Rltk) -> MainMenuResult {
+    let save_exists = super::saveload_system::does_save_exist();
     let runstate = gs.ecs.fetch::<RunState>();
 
     ctx.print_color_centered(15, RGB::named(rltk::YELLOW), RGB::named(rltk::BLACK),
@@ -27,12 +30,14 @@ pub fn main_menu(gs: &mut State, ctx: &mut Rltk) -> MainMenuResult {
                                      RGB::named(rltk::BLACK), "Begin New Game");
         }
 
-        if selection == MainMenuSelection::LoadGame {
-            ctx.print_color_centered(25, RGB::named(rltk::MAGENTA),
-                                     RGB::named(rltk::BLACK), "Load Game");
-        } else {
-            ctx.print_color_centered(25, RGB::named(rltk::WHITE),
-                                     RGB::named(rltk::BLACK), "Load Game");
+        if save_exists {
+            if selection == MainMenuSelection::LoadGame {
+                ctx.print_color_centered(25, RGB::named(rltk::MAGENTA),
+                                        RGB::named(rltk::BLACK), "Load Game");
+            } else {
+                ctx.print_color_centered(25, RGB::named(rltk::WHITE),
+                                        RGB::named(rltk::BLACK), "Load Game");
+            }
         }
 
         if selection == MainMenuSelection::Quit {
@@ -51,19 +56,25 @@ pub fn main_menu(gs: &mut State, ctx: &mut Rltk) -> MainMenuResult {
                         return MainMenuResult::NoSelection { selected: MainMenuSelection::Quit }
                     },
                     VirtualKeyCode::Up => {
-                        let new_selection = match selection {
+                        let mut new_selection = match selection {
                             MainMenuSelection::NewGame => MainMenuSelection::Quit,
                             MainMenuSelection::LoadGame => MainMenuSelection::NewGame,
                             MainMenuSelection::Quit => MainMenuSelection::LoadGame,
                         };
+                        if new_selection == MainMenuSelection::LoadGame && !save_exists {
+                            new_selection = MainMenuSelection::NewGame;
+                        }
                         return MainMenuResult::NoSelection { selected: new_selection };
                     },
                     VirtualKeyCode::Down => {
-                        let new_selection = match selection {
+                        let mut new_selection = match selection {
                             MainMenuSelection::NewGame => MainMenuSelection::LoadGame,
                             MainMenuSelection::LoadGame => MainMenuSelection::Quit,
                             MainMenuSelection::Quit => MainMenuSelection::NewGame,
                         };
+                        if new_selection == MainMenuSelection::LoadGame && !save_exists {
+                            new_selection = MainMenuSelection::NewGame;
+                        }
                         return MainMenuResult::NoSelection { selected: new_selection };
                     },
                     VirtualKeyCode::Return => {

@@ -1,7 +1,7 @@
-use rltk::{GameState, Point, RGB, Rltk, VirtualKeyCode};
-use specs::prelude::*;
-use std::cmp::{max, min};
-use specs_derive::Component;
+use rltk::{GameState, Point, Rltk};
+use specs::{prelude::*, saveload::{SimpleMarker, SimpleMarkerAllocator}};
+
+extern crate serde;
 
 mod components;
 pub use components::*;
@@ -25,6 +25,8 @@ mod player;
 pub use player::*;
 mod rect;
 pub use rect::*;
+mod saveload_system;
+use saveload_system::*;
 mod spawner;
 pub use spawner::*;
 mod visibility_system;
@@ -40,6 +42,7 @@ pub enum RunState {
     ShowDropItem,
     ShowTargeting { range: i32, item: Entity },
     MainMenu { menu_selection: gui::MainMenuSelection },
+    SaveGame,
 }
 
 fn main () -> rltk::BError {
@@ -74,6 +77,10 @@ fn main () -> rltk::BError {
     gs.ecs.register::<WantsToPickupItem>();
     gs.ecs.register::<WantsToDropItem>();
     gs.ecs.register::<WantsToUseItem>();
+    gs.ecs.register::<SimpleMarker<SerializeMe>>();
+    gs.ecs.register::<SerializationHelper>();
+
+    gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
 
     let map: Map = Map::new_map_rooms_and_corridors();
     let (player_x, player_y) = map.rooms[0].center();
@@ -171,11 +178,21 @@ impl GameState for State {
                     gui::MainMenuResult::Selected { selected } => {
                         match selected {
                             gui::MainMenuSelection::NewGame => new_runstate = RunState::PreRun,
-                            gui::MainMenuSelection::LoadGame => new_runstate = RunState::PreRun,
+                            gui::MainMenuSelection::LoadGame => {
+                                saveload_system::load_game(&mut self.ecs);
+                                new_runstate = RunState::AwaitingInput;
+                                saveload_system::delete_save();
+                            },
                             gui::MainMenuSelection::Quit => { ::std::process::exit(0); },
                         }
                     }
                 }
+            },
+            RunState::SaveGame => {
+                saveload_system::save_game(&mut self.ecs);
+                new_runstate = RunState::MainMenu {
+                    menu_selection: gui::MainMenuSelection::LoadGame
+                };
             },
             RunState::PreRun => {
                 self.run_systems();

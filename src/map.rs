@@ -1,4 +1,5 @@
 use rltk::*;
+use serde::{Serialize, Deserialize};
 use specs::prelude::*;
 use std::cmp::{min, max};
 use super::{Player, Rect, Viewshed};
@@ -8,7 +9,7 @@ pub const MAPHEIGHT: usize = 43;
 pub const MAPCOUNT: usize = MAPHEIGHT * MAPWIDTH;
 
 /// Enum differentiating floor tiles from wall tiles.
-#[derive(PartialEq, Copy, Clone)]
+#[derive(PartialEq, Copy, Clone, Serialize, Deserialize)]
 pub enum TileType {
     Wall, Floor
 }
@@ -17,6 +18,7 @@ pub enum TileType {
 ///
 /// `revealed_tiles`: `true` if the tile has been in our fov before, else `false`.
 /// `visible_tiles`: `true` if the tile is currently in our fov, else `false`.
+#[derive(Default, Serialize, Deserialize, Clone)]
 pub struct Map {
     pub tiles: Vec<TileType>,
     pub rooms: Vec<Rect>,
@@ -25,6 +27,8 @@ pub struct Map {
     pub revealed_tiles: Vec<bool>,
     pub visible_tiles: Vec<bool>,
     pub blocked: Vec<bool>,
+    #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
     pub tile_content: Vec<Vec<Entity>>,
 }
 
