@@ -61,26 +61,31 @@ pub struct CombatStats {
     pub power: i32,
 }
 
-#[derive(Component, Debug, Clone)]
-pub struct WantsToMelee {
-    pub target: Entity
-}
-
+/// Flag: entity is able to act at range.
 #[derive(Component, Debug)]
 pub struct Ranged {
     pub range: i32
 }
 
+/// Entity with this can pass along confusion.
+#[derive(Component, Debug)]
+pub struct Confusion {
+    pub turns: i32,
+}
+
+/// Flag: entity affects others within radius of its location.
 #[derive(Component, Debug)]
 pub struct AreaOfEffect {
     pub radius: i32
 }
 
+/// Flag: entity is able to inflict damage on other entities.
 #[derive(Component, Debug)]
 pub struct InflictsDamage {
     pub damage: i32
 }
 
+/// Struct used for handling and applying damage to entities.
 #[derive(Component, Debug)]
 pub struct SufferDamage {
     pub amount: Vec<i32>,
@@ -97,6 +102,12 @@ impl SufferDamage {
     }
 }
 
+/// Intent: entity wants to engage in melee combat against `target`.
+#[derive(Component, Debug, Clone)]
+pub struct WantsToMelee {
+    pub target: Entity
+}
+
 /// Intent. Taken on when an entity tries to pick up an item.
 #[derive(Component, Debug, Clone)]
 pub struct WantsToPickupItem {
@@ -110,12 +121,14 @@ pub struct WantsToDropItem {
     pub item: Entity
 }
 
+/// Intent. Taken on when an entity tries to use an item.
 #[derive(Component, Debug, Clone)]
 pub struct WantsToUseItem {
     pub item: Entity,
     pub target: Option<rltk::Point>
 }
 
+/// Flag: entity with this flag is in the possession (backpack) of `owner`.
 #[derive(Component, Debug, Clone)]
 pub struct InBackpack {
     pub owner: Entity

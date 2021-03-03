@@ -47,12 +47,13 @@ impl<'a> System<'a> for ItemUseSystem {
         ReadStorage<'a, InflictsDamage>,
         WriteStorage<'a, CombatStats>,
         WriteStorage<'a, SufferDamage>,
-        ReadStorage<'a, AreaOfEffect>
+        ReadStorage<'a, AreaOfEffect>,
+        WriteStorage<'a, Confusion>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
         let (player_ent, mut log, map, entities, mut wants_use, names, consumables,
-            healing, inflicts_damage, mut combat_stats, mut suffer, aoe) = data;
+            healing, inflicts_damage, mut combat_stats, mut suffer, aoe, mut confused) = data;
 
         for (ent, useitem) in (&entities, &wants_use).join() {
             let mut item_used = true;
@@ -141,6 +142,32 @@ impl<'a> System<'a> for ItemUseSystem {
                         }
                     }
                 }
+            }
+
+            let mut add_confusion = Vec::new();
+            {
+                match confused.get(useitem.item) {
+                    None => {},
+                    Some(confusion) => {
+                        item_used = false;
+                        for mob in targets.iter() {
+                            add_confusion.push((*mob, confusion.turns));
+                            if ent == *player_ent {
+                                let mob_name = names.get(*mob).unwrap();
+                                let item_name = names.get(useitem.item).unwrap();
+                                log.entries.push(
+                                    format!("You use {} on {}, confusing them.",
+                                            item_name.name, mob_name.name)
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+            for mob in add_confusion.iter() {
+                confused
+                    .insert(mob.0, Confusion { turns: mob.1 })
+                    .expect("Unable to insert status");
             }
 
             // Discard consumable items after they have been used.

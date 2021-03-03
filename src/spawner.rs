@@ -144,12 +144,13 @@ fn random_item(ecs: &mut World, x: i32, y: i32) {
     let roll: i32;
     {
         let mut rng = ecs.write_resource::<RandomNumberGenerator>();
-        roll = rng.roll_dice(1, 3);
+        roll = rng.roll_dice(1, 4);
     }
     match roll {
         1 => potion_health(ecs, x, y),
         2 => scroll_magic_missile(ecs, x, y),
-        _ => scroll_fireball(ecs, x, y),
+        3 => scroll_fireball(ecs, x, y),
+        _ => scroll_confusion(ecs, x, y),
     }
 }
 
@@ -172,6 +173,8 @@ fn potion_health(ecs: &mut World, x: i32, y: i32) {
 }
 
 /// Spawns a Magic Missile Scroll at `(x,y)`.
+///
+/// Magic missile scrolls target a single entity, and are consumed on use.
 fn scroll_magic_missile(ecs: &mut World, x: i32, y: i32) {
     ecs
         .create_entity()
@@ -191,6 +194,9 @@ fn scroll_magic_missile(ecs: &mut World, x: i32, y: i32) {
 }
 
 /// Spawns a fireball scroll at `(x,y)`.
+///
+/// Fireball is an area-of-effect ability, hitting all entities within range
+/// of the targeted location. Like other scrolls, these are consumed on use.
 fn scroll_fireball(ecs: &mut World, x: i32, y: i32) {
     ecs
         .create_entity()
@@ -207,5 +213,27 @@ fn scroll_fireball(ecs: &mut World, x: i32, y: i32) {
         .with(Ranged { range: 6 })
         .with(InflictsDamage { damage: 20 })
         .with(AreaOfEffect { radius: 3 })
+        .build();
+}
+
+/// Spawns a confusion scroll at `(x,y)`.
+///
+/// Confusion targets a single entity at range, and confuses them for a number
+/// of turns. During this time, the entity is unable to perform any actions.
+fn scroll_confusion(ecs: &mut World, x: i32, y: i32) {
+    ecs
+        .create_entity()
+        .with(Position { x, y })
+        .with(Renderable {
+            glyph: rltk::to_cp437(')'),
+            fg: RGB::named(rltk::PINK),
+            bg: RGB::named(rltk::BLACK),
+            render_order: 2,
+        })
+        .with(Name { name: "Confusion Scroll".to_string() })
+        .with(Item {})
+        .with(Consumable {})
+        .with(Ranged { range: 6 })
+        .with(Confusion { turns: 4 })
         .build();
 }

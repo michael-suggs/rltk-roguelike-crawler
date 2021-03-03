@@ -37,7 +37,7 @@ pub fn delete_the_dead(ecs: &mut World) {
             if stats.hp < 1 {
                 // Make sure we don't delete the player (will crash the game)
                 match players.get(ent) {
-                    None    => {
+                    None => {
                         let victim_name = names.get(ent);
                         if let Some(victim_name) = victim_name {
                             log.entries.push(format!("{} is dead", &victim_name.name));

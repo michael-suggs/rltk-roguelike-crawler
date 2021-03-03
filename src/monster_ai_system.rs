@@ -1,5 +1,5 @@
 use specs::prelude::*;
-use super::{Map, Monster, Name, Position, RunState, Viewshed, WantsToMelee};
+use super::{components::*, Map, RunState};
 use rltk::{console, field_of_view, Point};
 
 pub struct MonsterAI {}
@@ -19,6 +19,7 @@ impl<'a> System<'a> for MonsterAI {
         ReadStorage<'a, Monster>,
         WriteStorage<'a, Position>,
         WriteStorage<'a, WantsToMelee>,
+        WriteStorage<'a, Confusion>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
@@ -31,7 +32,8 @@ impl<'a> System<'a> for MonsterAI {
             mut viewshed,
             monster,
             mut position,
-            mut wants_to_melee
+            mut wants_to_melee,
+            mut confused
         ) = data;
 
         // If it's not the monster's turn, immediately return.
@@ -40,35 +42,49 @@ impl<'a> System<'a> for MonsterAI {
         // Else, do the AI.
         for (ent, mut viewshed, _monster, mut pos)
                 in (&entities, &mut viewshed, &monster, &mut position).join() {
-            let distance = rltk::DistanceAlg::Pythagoras.distance2d(
-                Point::new(pos.x, pos.y), *player_pos);
-
-            // If player is in melee range, initiate combat
-            if distance < 1.5 {
-                wants_to_melee
-                    .insert(ent, WantsToMelee { target: *player_entity })
-                    .expect("Unable to insert attack");
-            } else if viewshed.visible_tiles.contains(&*player_pos) {
-                // If player is visible, get path to them with A*.
-                let path = rltk::a_star_search(
-                    map.xy_idx(pos.x, pos.y) as i32,
-                    map.xy_idx(player_pos.x, player_pos.y) as i32,
-                    &mut *map
-                );
-
-                // If path is found, take a step and recalculate the viewshed.
-                // `steps[0]` is the current position, so take the next step.
-                if path.success && path.steps.len() > 1 {
-                    let mut idx = map.xy_idx(pos.x, pos.y);
-                    map.blocked[idx] = false;
-                    pos.x = path.steps[1] as i32 % map.width;
-                    pos.y = path.steps[1] as i32 / map.width;
-                    idx = map.xy_idx(pos.x, pos.y);
-                    map.blocked[idx] = true;
-                    viewshed.dirty = true;
-                }
+            // Check to see if the mob is confused.
+            let mut can_act = true;
+            if let Some(am_confused) = confused.get_mut(ent) {
+                // If confused, decrement remaining turns to be confused.
+                am_confused.turns -= 1;
+                // If they're no longer confused, take them out of confused;
+                // will be able to act on their next turn.
+                if am_confused.turns < 1 { confused.remove(ent); }
+                // Confused--can't act.
+                can_act = false;
             }
 
+            // If they're not confused, let them act as normal.
+            if can_act {
+                let distance = rltk::DistanceAlg::Pythagoras.distance2d(
+                    Point::new(pos.x, pos.y), *player_pos);
+
+                // If player is in melee range, initiate combat
+                if distance < 1.5 {
+                    wants_to_melee
+                        .insert(ent, WantsToMelee { target: *player_entity })
+                        .expect("Unable to insert attack");
+                } else if viewshed.visible_tiles.contains(&*player_pos) {
+                    // If player is visible, get path to them with A*.
+                    let path = rltk::a_star_search(
+                        map.xy_idx(pos.x, pos.y) as i32,
+                        map.xy_idx(player_pos.x, player_pos.y) as i32,
+                        &mut *map
+                    );
+
+                    // If path is found, take a step and recalculate the viewshed.
+                    // `steps[0]` is the current position, so take the next step.
+                    if path.success && path.steps.len() > 1 {
+                        let mut idx = map.xy_idx(pos.x, pos.y);
+                        map.blocked[idx] = false;
+                        pos.x = path.steps[1] as i32 % map.width;
+                        pos.y = path.steps[1] as i32 / map.width;
+                        idx = map.xy_idx(pos.x, pos.y);
+                        map.blocked[idx] = true;
+                        viewshed.dirty = true;
+                    }
+                }
+            }
         }
     }
 }
