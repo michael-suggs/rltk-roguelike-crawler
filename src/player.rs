@@ -1,7 +1,6 @@
 use rltk::{console, Point, Rltk, VirtualKeyCode};
 use specs::prelude::*;
-use super::{CombatStats, Map, Position, Player, RunState, State, TileType,
-    Viewshed, WantsToMelee, Item, WantsToPickupItem, gamelog::GameLog};
+use super::{components::*, GameLog, Map, State, RunState, TileType};
 use std::cmp::{min, max};
 
 /// Tries to move the player by `(delta_x, delta_y)` amount.
@@ -92,12 +91,6 @@ pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState{
             VirtualKeyCode::Numpad3
             | VirtualKeyCode::N
             | VirtualKeyCode::Z => try_move_player(-1, 1, &mut gs.ecs),
-            // Level changes
-            VirtualKeyCode::Period => {
-                if try_next_level(&mut gs.ecs) {
-                    return RunState::NextLevel;
-                }
-            },
             // Picks up an item (if there is one).
             VirtualKeyCode::G => get_item(&mut gs.ecs),
             // Shows the inventory screen.
@@ -105,6 +98,14 @@ pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState{
             | VirtualKeyCode::I => return RunState::ShowInventory,
             // Shows item drop interface.
             VirtualKeyCode::P => return RunState::ShowDropItem,
+            // Skip the player's current turn.
+            VirtualKeyCode::Space => return skip_turn(&mut gs.ecs),
+            // Level changes
+            VirtualKeyCode::Period => {
+                if try_next_level(&mut gs.ecs) {
+                    return RunState::NextLevel;
+                }
+            },
             // Save and Quit.
             VirtualKeyCode::Escape => return RunState::SaveGame,
 
@@ -154,4 +155,18 @@ fn try_next_level(ecs: &mut World) -> bool {
         log.entries.push("There is no way down from here.".to_string());
         false
     }
+}
+
+fn skip_turn(ecs: &mut World) -> RunState {
+    let player_ent = ecs.fetch::<Entity>();
+    let viewshed = ecs.read_storage::<Viewshed>().get(*player_ent).unwrap();
+    let monsters = ecs.read_storage::<Monster>();
+    let worldmap_res = ecs.fetch::<Map>();
+
+    let mut can_heal = true;
+    for tile in viewshed.visible_tiles.iter() {
+
+    }
+
+    RunState::PlayerTurn
 }

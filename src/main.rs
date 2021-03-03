@@ -1,36 +1,35 @@
+extern crate serde;
+
 use rltk::{GameState, Point, Rltk};
 use specs::{prelude::*, saveload::{SimpleMarker, SimpleMarkerAllocator}};
 
-extern crate serde;
+use damage_system::DamageSystem;
+use inventory_system::{ItemCollectionSystem, ItemUseSystem, ItemDropSystem};
+use map_indexing_system::MapIndexingSystem;
+use melee_combat_system::MeleeCombatSystem;
+use monster_ai_system::MonsterAI;
+use player::*;
+use visibility_system::VisibilitySystem;
+
+pub use components::*;
+pub use map::*;
+pub use rect::Rect;
 
 mod components;
-pub use components::*;
-mod damage_system;
-pub use damage_system::*;
-mod gamelog;
-pub use gamelog::*;
-mod gui;
-pub use gui::*;
-mod inventory_system;
-pub use inventory_system::*;
 mod map;
-pub use map::*;
-mod map_indexing_system;
-pub use map_indexing_system::*;
-mod melee_combat_system;
-pub use melee_combat_system::*;
-mod monster_ai_system;
-pub use monster_ai_system::*;
-mod player;
-pub use player::*;
 mod rect;
-pub use rect::*;
-mod saveload_system;
-use saveload_system::*;
+mod damage_system;
+mod gamelog;
+mod gui;
+mod inventory_system;
+mod map_indexing_system;
+mod melee_combat_system;
+mod monster_ai_system;
+mod player;
 mod spawner;
-pub use spawner::*;
 mod visibility_system;
-pub use visibility_system::VisibilitySystem;
+
+pub mod saveload_system;
 
 #[derive(PartialEq, Copy, Clone)]
 pub enum RunState {
@@ -146,7 +145,7 @@ impl State {
             let mut should_delete = true;
 
             // Don't delete the player!
-            if let Some(p) = player.get(ent) {
+            if let Some(_) = player.get(ent) {
                 should_delete = false;
             };
 
