@@ -1,4 +1,4 @@
-use rltk::{RGB, RandomNumberGenerator};
+use rltk::{RGB, RandomNumberGenerator, to_cp437};
 use serde::de::value::MapDeserializer;
 use specs::{prelude::*, saveload::{MarkedBuilder, SimpleMarker}};
 use std::collections::HashMap;
@@ -74,6 +74,8 @@ pub fn spawn_room(ecs: &mut World, room: &Rect, map_depth: i32) {
             "Fireball Scroll" => scroll_fireball(ecs, x, y),
             "Confusion Scroll" => scroll_confusion(ecs, x, y),
             "Magic Missile Scroll" => scroll_magic_missile(ecs, x, y),
+            "Dagger" => dagger(ecs, x, y),
+            "Shield" => shield(ecs, x, y),
             _ => {}
         }
     }
@@ -87,20 +89,9 @@ fn room_table(map_depth: i32) -> RandomTable {
         .add("Fireball Scroll", 2 + map_depth)
         .add("Confusion Scroll", 2 + map_depth)
         .add("Magic Missile Scroll", 4)
+        .add("Dagger", 3)
+        .add("Shield", 3)
 }
-
-// /// Randomly selects a monster type and generates it at `(x,y)`.
-// pub fn random_monster(ecs: &mut World, x: i32, y: i32) {
-//     let roll: i32;
-//     {
-//         let mut rng = ecs.write_resource::<RandomNumberGenerator>();
-//         roll = rng.roll_dice(1, 2);
-//     }
-//     match roll {
-//         1 => { orc(ecs, x, y) }
-//         _ => { goblin(ecs, x, y) }
-//     }
-// }
 
 /// Makes an orc.
 fn orc(ecs: &mut World, x: i32, y: i32) {
@@ -138,20 +129,6 @@ fn monster<S: ToString>(
         .marked::<SimpleMarker<SerializeMe>>()
         .build();
 }
-
-// fn random_item(ecs: &mut World, x: i32, y: i32) {
-//     let roll: i32;
-//     {
-//         let mut rng = ecs.write_resource::<RandomNumberGenerator>();
-//         roll = rng.roll_dice(1, 4);
-//     }
-//     match roll {
-//         1 => potion_health(ecs, x, y),
-//         2 => scroll_magic_missile(ecs, x, y),
-//         3 => scroll_fireball(ecs, x, y),
-//         _ => scroll_confusion(ecs, x, y),
-//     }
-// }
 
 /// Spawns a health potion at `(x,y)`.
 fn potion_health(ecs: &mut World, x: i32, y: i32) {
@@ -237,6 +214,38 @@ fn scroll_confusion(ecs: &mut World, x: i32, y: i32) {
         .with(Consumable {})
         .with(Ranged { range: 6 })
         .with(Confusion { turns: 4 })
+        .marked::<SimpleMarker<SerializeMe>>()
+        .build();
+}
+
+fn dagger(ecs: &mut World, x: i32, y: i32) {
+    ecs
+        .create_entity()
+        .with(Position { x, y })
+        .with(Renderable {
+            glyph: rltk::to_cp437('/'),
+            fg: RGB::named(rltk::RED),
+            bg: RGB::named(rltk::BLACK),
+            render_order: 2,
+        })
+        .with(Name { name: "Dagger".to_string() })
+        .with(Item {})
+        .marked::<SimpleMarker<SerializeMe>>()
+        .build();
+}
+
+fn shield(ecs: &mut World, x: i32, y: i32) {
+    ecs
+        .create_entity()
+        .with(Position { x, y })
+        .with(Renderable {
+            glyph: rltk::to_cp437('('),
+            fg: RGB::named(rltk::RED),
+            bg: RGB::named(rltk::BLACK),
+            render_order: 2,
+        })
+        .with(Name { name: "Shield".to_string() })
+        .with(Item {})
         .marked::<SimpleMarker<SerializeMe>>()
         .build();
 }
