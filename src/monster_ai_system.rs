@@ -1,6 +1,6 @@
 use specs::prelude::*;
 use super::{components::*, Map, RunState};
-use rltk::{console, field_of_view, Point};
+use rltk::Point;
 
 pub struct MonsterAI {}
 

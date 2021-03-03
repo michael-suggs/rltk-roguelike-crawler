@@ -1,8 +1,6 @@
-use rltk::{RGB, RandomNumberGenerator, SimpleConsole, to_cp437};
-use serde::de::value::MapDeserializer;
+use rltk::{RGB, RandomNumberGenerator};
 use specs::{prelude::*, saveload::{MarkedBuilder, SimpleMarker}};
 use std::collections::HashMap;
-use crate::map;
 
 use super::{components::*, random_table::RandomTable, Rect, MAPWIDTH};
 

@@ -24,7 +24,7 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
             let target = combat_stats.get(*potential_target);
             match target {
                 None => {}
-                Some(t) => {
+                Some(_) => {
                     wants_to_melee
                         .insert(ent, WantsToMelee { target: *potential_target })
                         .expect("Add target failed.");
@@ -165,8 +165,7 @@ pub fn player_input(gs: &mut State, ctx: &mut Rltk) -> RunState{
             // Picks up an item (if there is one).
             VirtualKeyCode::G => get_item(&mut gs.ecs),
             // Shows the inventory screen.
-            VirtualKeyCode::B
-            | VirtualKeyCode::I => return RunState::ShowInventory,
+            VirtualKeyCode::I => return RunState::ShowInventory,
             // Shows item drop interface.
             VirtualKeyCode::P => return RunState::ShowDropItem,
             VirtualKeyCode::R => return RunState::ShowRemoveItem,

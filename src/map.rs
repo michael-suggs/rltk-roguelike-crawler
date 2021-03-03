@@ -2,7 +2,7 @@ use rltk::*;
 use serde::{Serialize, Deserialize};
 use specs::prelude::*;
 use std::cmp::{min, max};
-use super::{Player, Rect, Viewshed};
+use super::Rect;
 
 pub const MAPWIDTH: usize = 80;
 pub const MAPHEIGHT: usize = 43;

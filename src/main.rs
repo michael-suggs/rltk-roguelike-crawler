@@ -1,6 +1,5 @@
 extern crate serde;
 
-use gui::ItemMenuResult;
 use rltk::{GameState, Point, Rltk};
 use specs::{prelude::*, saveload::{SimpleMarker, SimpleMarkerAllocator}};
 
@@ -46,6 +45,7 @@ pub enum RunState {
     SaveGame,
     NextLevel,
     ShowRemoveItem,
+    GameOver
 }
 
 fn main () -> rltk::BError {
@@ -86,6 +86,7 @@ fn main () -> rltk::BError {
     gs.ecs.register::<Equipped>();
     gs.ecs.register::<MeleePowerBonus>();
     gs.ecs.register::<DefenseBonus>();
+    gs.ecs.register::<WantsToRemoveItem>();
 
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
 
@@ -116,11 +117,13 @@ fn main () -> rltk::BError {
     rltk::main_loop(context, gs)
 }
 
+/// Handles game states and transitions.
 pub struct State {
     pub ecs: World
 }
 
 impl State {
+    /// Runs all game systems on call, keeping things up to date.
     fn run_systems(&mut self) {
         let mut vis = VisibilitySystem {};
         vis.run_now(&self.ecs);
@@ -144,6 +147,7 @@ impl State {
         self.ecs.maintain();
     }
 
+    /// Calculates what entities should be removed from the game when moving to a new level.
     fn entities_to_remove_on_level_change(&mut self) -> Vec<Entity> {
         let entities = self.ecs.entities();
         let player = self.ecs.read_storage::<Player>();
@@ -179,6 +183,7 @@ impl State {
         to_delete
     }
 
+    /// When using a staircase, generates a new level and sends the player to it.
     fn goto_next_level(&mut self) {
         // Delete entities that aren't the player or their equipment.
         for target in self.entities_to_remove_on_level_change() {
@@ -220,20 +225,67 @@ impl State {
             player_stats.hp = i32::max(player_stats.hp, player_stats.max_hp / 2);
         }
     }
+
+    /// Cleans up resources and storage after a game over event, and sets up for a new game.
+    fn game_over_cleanup(&mut self) {
+        // Delete all game entities in preparation for new ones.
+        let mut to_delete: Vec<Entity> = Vec::new();
+        self.ecs.entities().join().for_each(|e| to_delete.push(e));
+        to_delete.iter().for_each(|e| self.ecs.delete_entity(*e).expect("Deletion failed"));
+
+        // Make a new worldmap and set it as our game's map.
+        let worldmap = {
+            let mut worldmap_res = self.ecs.write_resource::<Map>();
+            *worldmap_res = Map::new_map_rooms_and_corridors(1);
+            worldmap_res.clone()
+        };
+
+        // Spawn entities in all the rooms for the newly generated map.
+        worldmap.rooms
+            .iter()
+            .skip(1)
+            .for_each(|room| spawner::spawn_room(&mut self.ecs, room, 1));
+
+        // Create a new player and get their intended location.
+        let (player_x, player_y) = worldmap.rooms[0].center();
+        let player_ent = spawner::player(&mut self.ecs, player_x, player_y);
+        let mut player_pos = self.ecs.write_resource::<Point>();
+        *player_pos = Point::new(player_x, player_y);
+
+        // Write the new player into the game's resources.
+        let mut pos_components = self.ecs.write_storage::<Position>();
+        let mut player_ent_writer = self.ecs.write_resource::<Entity>();
+        *player_ent_writer = player_ent;
+
+        // Write the new player's position into the game's resources.
+        if let Some(player_pos_comp) = pos_components.get_mut(player_ent) {
+            player_pos_comp.x = player_x;
+            player_pos_comp.y = player_y;
+        }
+
+        // Get the player's viewshed and force a recalculation.
+        let mut viewshed_components = self.ecs.write_storage::<Viewshed>();
+        if let Some(vs) = viewshed_components.get_mut(player_ent) {
+            vs.dirty = true;
+        }
+    }
 }
 
 impl GameState for State {
     fn tick(&mut self, ctx: &mut Rltk) {
+        // Fetch and get a handle to our current runstate.
         let mut new_runstate;
         {
             let runstate = self.ecs.fetch::<RunState>();
             new_runstate = *runstate;
         }
-
+        // Clear the active console.
         ctx.cls();
 
+        // Keeps the system from rendering the map behind the main menu.
         match new_runstate {
             RunState::MainMenu{..} => {},
+            // If we're not at the main menu, go ahead and render the map.
             _ => {
                 draw_map(&self.ecs, ctx);
                 {
@@ -241,9 +293,11 @@ impl GameState for State {
                     let renderables = self.ecs.read_storage::<Renderable>();
                     let map = self.ecs.fetch::<Map>();
 
+                    // Sort our renderables to allow for a rendering order.
                     let mut data = (&positions, &renderables).join().collect::<Vec<_>>();
                     data.sort_by(|&a, &b| b.1.render_order.cmp(&a.1.render_order));
 
+                    // Visible tiles.
                     for (pos, render) in data.iter() {
                         let idx = map.xy_idx(pos.x, pos.y);
                         if map.visible_tiles[idx] {
@@ -257,61 +311,81 @@ impl GameState for State {
 
         // RunState state machine
         match new_runstate {
+            // At the main menu
             RunState::MainMenu{..} => {
                 match gui::main_menu(self, ctx) {
+                    // Stay at the main menu until an option is selected.
                     gui::MainMenuResult::NoSelection { selected } => {
                         new_runstate = RunState::MainMenu { menu_selection: selected }
                     },
+                    // When the player has selected a menu option, perform its action.
                     gui::MainMenuResult::Selected { selected } => {
                         match selected {
+                            // Start up a new game
                             gui::MainMenuSelection::NewGame => new_runstate = RunState::PreRun,
+                            // Try to load a saved game, and resume play.
                             gui::MainMenuSelection::LoadGame => {
                                 saveload_system::load_game(&mut self.ecs);
                                 new_runstate = RunState::AwaitingInput;
                                 saveload_system::delete_save();
                             },
+                            // Quits the game
                             gui::MainMenuSelection::Quit => { ::std::process::exit(0); },
                         }
                     }
                 }
             },
+            // Saves the game in its current state.
             RunState::SaveGame => {
+                // Makes a savegame file and saves to it.
                 saveload_system::save_game(&mut self.ecs);
+                // Send the player back to the main menu on save.
                 new_runstate = RunState::MainMenu {
                     menu_selection: gui::MainMenuSelection::LoadGame
                 };
             },
+            // Tells the system to run all systems before starting the game.
             RunState::PreRun => {
                 self.run_systems();
                 self.ecs.maintain();
                 new_runstate = RunState::AwaitingInput;
             },
+            // Waiting for the player to do something
             RunState::AwaitingInput => {
                 new_runstate = player_input(self, ctx);
             },
+            // Player has chosen an action--perform their chosen action by updating all systems.
             RunState::PlayerTurn => {
                 self.run_systems();
                 self.ecs.maintain();
                 new_runstate = RunState::MonsterTurn;
             },
+            // Monster's turn to act.
             RunState::MonsterTurn => {
+                // Monster action is handled by the AI, so just run the systems.
                 self.run_systems();
                 self.ecs.maintain();
                 new_runstate = RunState::AwaitingInput;
             },
+            // Open the inventory screen and handle inventory actions.
             RunState::ShowInventory => {
                 let result = gui::show_inventory(self, ctx);
                 match result.0 {
+                    // Pressed escape--just close the inventory and wait for some other input.
                     gui::ItemMenuResult::Cancel => new_runstate = RunState::AwaitingInput,
+                    // Haven't selected yet--loop here until something is chosen.
                     gui::ItemMenuResult::NoResponse => {}
+                    // Selected something from the inventory.
                     gui::ItemMenuResult::Selected => {
                         let item_ent = result.1.unwrap();
+                        // If the selected item has the `Ranged` component, send to targeting mode.
                         if let Some(is_ranged) = self.ecs.read_storage::<Ranged>().get(item_ent) {
                             new_runstate = RunState::ShowTargeting {
                                 range: is_ranged.range,
                                 item: item_ent
                             };
                         } else {
+                            // If not ranged, use the selected item.
                             let mut intent = self.ecs.write_storage::<WantsToUseItem>();
                             intent
                                 .insert(*self.ecs.fetch::<Entity>(), WantsToUseItem {
@@ -319,67 +393,105 @@ impl GameState for State {
                                     target: None
                                 })
                                 .expect("Unable to insert intent");
+                            // Counts as player action--run systems in `PlayerTurn` to make
+                            // effects of the item take place.
                             new_runstate = RunState::PlayerTurn;
                         }
                     }
                 }
             },
+            // Open the menu for dropping items from the player's inventory.
             RunState::ShowDropItem => {
                 let result = gui::drop_item_menu(self, ctx);
                 match result.0 {
+                    // Pressed escape--exit the menu and wait for another input from the player.
                     gui::ItemMenuResult::Cancel => new_runstate = RunState::AwaitingInput,
+                    // Haven't selected anything yet--loop here until we have a selection.
                     gui::ItemMenuResult::NoResponse => {}
+                    // Selected an item to drop.
                     gui::ItemMenuResult::Selected => {
+                        // Insert intent to drop the selected item so the game's systems drop it.
                         let item_ent = result.1.unwrap();
                         let mut intent = self.ecs.write_storage::<WantsToDropItem>();
                         intent
                             .insert(*self.ecs.fetch::<Entity>(), WantsToDropItem { item: item_ent })
                             .expect("Unable to insert intent");
+                        // Systems handle dropping the item on the player's turn.
                         new_runstate = RunState::PlayerTurn;
                     }
                 }
             },
+            // Open the menu for removing equipped items.
             RunState::ShowRemoveItem => {
                 let result = gui::remove_item_menu(self, ctx);
                 match result.0 {
+                    // Pressed escape--exit the menu and wait for another input from the player.
                     gui::ItemMenuResult::Cancel => new_runstate = RunState::AwaitingInput,
+                    // Haven't selected anything yet--loop here until we have a selection.
                     gui::ItemMenuResult::NoResponse => {},
+                    // Selected a piece of equipment to remove.
                     gui::ItemMenuResult::Selected => {
+                        // Insert intent to remove the selected item so the game can take it off.
                         let item_ent = result.1.unwrap();
                         let mut intent = self.ecs.write_storage::<WantsToRemoveItem>();
                         intent
                             .insert(*self.ecs.fetch::<Entity>(), WantsToRemoveItem { item: item_ent })
                             .expect("Unable to insert intent");
+                        // Systems handle removing the item on the player's turn.
                         new_runstate = RunState::PlayerTurn;
                     }
                 }
             },
+            // Player has selected a ranged item--show the targeting interface.
             RunState::ShowTargeting { range, item } => {
+                // Target is the tile selected by the player through the targeting interface.
                 let target = gui::ranged_target(self, ctx, range);
                 match target.0 {
+                    // Pressed escape--exit targeting and wait for another input from the player.
                     gui::ItemMenuResult::Cancel => new_runstate = RunState::AwaitingInput,
+                    // Haven't selected anything yet--loop here until we have a selection.
                     gui::ItemMenuResult::NoResponse => {},
+                    // Selected a target.
                     gui::ItemMenuResult::Selected => {
+                        // Insert intent to use the ranged item.
                         let mut intent = self.ecs.write_storage::<WantsToUseItem>();
                         intent
                             .insert(*self.ecs.fetch::<Entity>(),
                                     WantsToUseItem { item, target: target.1 })
                             .expect("Unable to insert intent");
+                        // Systems handle using the item on the player's turn.
                         new_runstate = RunState::PlayerTurn;
                     }
                 }
             },
+            // Went down some stairs.
             RunState::NextLevel => {
+                // Make a new map for the new depth level and send the player to it.
                 self.goto_next_level();
+                // PreRun on the new level to set everything up and in motion.
                 new_runstate = RunState::PreRun;
             },
+            // Player died.
+            RunState::GameOver => {
+                match gui::game_over(ctx) {
+                    gui::GameOverResult::NoSelection => {},
+                    gui::GameOverResult::QuitToMenu => {
+                        self.game_over_cleanup();
+                        new_runstate = RunState::MainMenu {
+                            menu_selection: gui::MainMenuSelection::NewGame
+                        };
+                    }
+                }
+            }
         }
 
+        // Set the game's state to the new state result from the match above.
         {
             let mut runwriter = self.ecs.write_resource::<RunState>();
             *runwriter = new_runstate;
         }
 
+        // Remove dead entities to keep them from clogging up the map.
         damage_system::delete_the_dead(&mut self.ecs);
     }
 }
