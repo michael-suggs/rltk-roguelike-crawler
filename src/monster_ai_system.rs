@@ -1,6 +1,6 @@
 use specs::prelude::*;
-use super::{components::*, Map, RunState};
-use rltk::Point;
+use super::{components::*, particle_system::ParticleBuilder, Map, RunState};
+use rltk::{BLACK, MAGENTA, Point, RGB, to_cp437};
 
 pub struct MonsterAI {}
 
@@ -20,6 +20,7 @@ impl<'a> System<'a> for MonsterAI {
         WriteStorage<'a, Position>,
         WriteStorage<'a, WantsToMelee>,
         WriteStorage<'a, Confusion>,
+        WriteExpect<'a, ParticleBuilder>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
@@ -33,7 +34,8 @@ impl<'a> System<'a> for MonsterAI {
             monster,
             mut position,
             mut wants_to_melee,
-            mut confused
+            mut confused,
+            mut particle_builder,
         ) = data;
 
         // If it's not the monster's turn, immediately return.
@@ -52,6 +54,11 @@ impl<'a> System<'a> for MonsterAI {
                 if am_confused.turns < 1 { confused.remove(ent); }
                 // Confused--can't act.
                 can_act = false;
+                // Play the confusion particle effect for each confused turn.
+                particle_builder.request(
+                    pos.x, pos.y, RGB::named(MAGENTA), RGB::named(BLACK),
+                    rltk::to_cp437('?'), 200.0
+                );
             }
 
             // If they're not confused, let them act as normal.
