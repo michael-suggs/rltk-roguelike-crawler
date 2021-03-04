@@ -1,4 +1,4 @@
-use rltk::{console, Point, Rltk, VirtualKeyCode};
+use rltk::{Point, Rltk, VirtualKeyCode};
 use specs::prelude::*;
 use super::{components::*, gamelog::GameLog, Map, State, RunState, TileType};
 use std::cmp::{min, max};
@@ -28,8 +28,6 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
                     wants_to_melee
                         .insert(ent, WantsToMelee { target: *potential_target })
                         .expect("Add target failed.");
-                    // Attack it!
-                    console::log(&format!("I bite my thumb at you, good sir!"));
                     return; // don't move after an attack
                 }
             }
