@@ -204,8 +204,15 @@ pub fn drop_item_menu(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Option
     let backpack = gs.ecs.read_storage::<InBackpack>();
     let entities = gs.ecs.entities();
 
-    let inventory = (&backpack, &names).join().filter(|item| item.0.owner == *player_ent);
-    let count = inventory.count();
+    let mut inventory: BTreeMap<String, (i32, specs::world::Index)> = BTreeMap::new();
+    for (ent, _, name) in (&entities, &backpack, &names).join().filter(|item| item.1.owner == *player_ent) {
+        if let Some((k,v)) = inventory.get_key_value(&name.name) {
+            inventory.insert(k.clone(), (v.0 + 1, ent.id()));
+        } else {
+            inventory.insert(name.name.clone(), (1, ent.id()));
+        }
+    }
+    let count = inventory.len();
 
     let mut y = (25 - (count / 2)) as i32;
     ctx.draw_box(15, y-2, 31, (count+3) as i32,
@@ -217,13 +224,12 @@ pub fn drop_item_menu(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Option
 
     let mut equippable: Vec<Entity> = Vec::new();
     let mut j = 0;
-    for (ent, _, name) in (&entities, &backpack, &names).join().filter(|item| item.1.owner == *player_ent) {
+    for (k, v) in inventory.iter() {
         ctx.set(17, y, RGB::named(rltk::WHITE), RGB::named(rltk::BLACK), rltk::to_cp437('('));
         ctx.set(18, y, RGB::named(rltk::YELLOW), RGB::named(rltk::BLACK), 97+j as rltk::FontCharType);
         ctx.set(19, y, RGB::named(rltk::WHITE), RGB::named(rltk::BLACK), rltk::to_cp437(')'));
-
-        ctx.print(21, y, &name.name.to_string());
-        equippable.push(ent);
+        ctx.print(21, y, format!("{} ({})", &k, &v.0));
+        equippable.push(entities.entity(v.1));
         y += 1;
         j += 1;
     }
@@ -262,7 +268,7 @@ pub fn remove_item_menu(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Opti
     ctx.print_color(18, y-2, RGB::named(rltk::YELLOW),
                     RGB::named(rltk::BLACK), "Remove Which Items?");
     ctx.print_color(18, y+count as i32 + 1, RGB::named(rltk::YELLOW),
-                    RGB::named(rltk::WHITE), "ESCAPE to cancel");
+                    RGB::named(rltk::BLACK), "ESCAPE to cancel");
 
     let mut equippable: Vec<Entity> = Vec::new();
     let mut j = 0;
