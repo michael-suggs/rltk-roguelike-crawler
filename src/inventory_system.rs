@@ -1,5 +1,6 @@
+use rltk::{BLACK, GREEN, MAGENTA, ORANGE, RED, RGB};
 use specs::prelude::*;
-use super::{components::*, gamelog::GameLog, Map};
+use super::{components::*, gamelog::GameLog, Map, particle_system::ParticleBuilder};
 
 pub struct ItemCollectionSystem {}
 
@@ -52,8 +53,11 @@ impl<'a> System<'a> for ItemUseSystem {
         ReadStorage<'a, Equippable>,
         WriteStorage<'a, Equipped>,
         WriteStorage<'a, InBackpack>,
+        WriteExpect<'a, ParticleBuilder>,
+        ReadStorage<'a, Position>,
     );
 
+    #[allow(clippy::clippy::cognitive_complexity)]
     fn run(&mut self, data: Self::SystemData) {
         let (
             player_ent,
@@ -72,6 +76,8 @@ impl<'a> System<'a> for ItemUseSystem {
             equippable,
             mut equipped,
             mut backpack,
+            mut particle_builder,
+            positions,
         ) = data;
 
         for (ent, useitem) in (&entities, &wants_use).join() {
@@ -111,6 +117,10 @@ impl<'a> System<'a> for ItemUseSystem {
                                 for mob in map.tile_content[idx].iter() {
                                     targets.push(*mob);
                                 }
+                                particle_builder.request(
+                                    tile_idx.x, tile_idx.y, RGB::named(ORANGE),
+                                    RGB::named(BLACK), rltk::to_cp437('░'), 200.0
+                                );
                             }
                         }
                     }
@@ -180,6 +190,13 @@ impl<'a> System<'a> for ItemUseSystem {
                                 format!("You use {} on {}, inflicting {} damage.",
                                         item_name.name, mob_name.name, damage.damage)
                             );
+                            // Flash red `‼` on damaged mob.
+                            if let Some(pos) = positions.get(*mob) {
+                                particle_builder.request(
+                                    pos.x, pos.y, RGB::named(RED), RGB::named(BLACK),
+                                    rltk::to_cp437('‼'), 200.0
+                                );
+                            }
                         } item_used = true;
                     }
                 }
@@ -203,6 +220,13 @@ impl<'a> System<'a> for ItemUseSystem {
                                     healer.heal_amount));
                             }
                             item_used = true;
+                            // Flash a green heart particle to indicate healing.
+                            if let Some(pos) = positions.get(*target) {
+                                particle_builder.request(
+                                    pos.x, pos.y, RGB::named(GREEN), RGB::named(BLACK),
+                                    rltk::to_cp437('♥'), 200.0
+                                );
+                            }
                         }
                     }
                 }
@@ -228,8 +252,16 @@ impl<'a> System<'a> for ItemUseSystem {
                                     format!("You use {} on {}, confusing them.",
                                             item_name.name, mob_name.name)
                                 );
+                                // Flash magenta `?` on the confused mob.
+                                if let Some(pos) = positions.get(*mob) {
+                                    particle_builder.request(
+                                        pos.x, pos.y, RGB::named(MAGENTA), RGB::named(BLACK),
+                                        rltk::to_cp437('?'), 200.0
+                                    );
+                                }
                             }
                         }
+                        item_used = true;
                     }
                 }
             }

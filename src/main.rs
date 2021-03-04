@@ -1,5 +1,6 @@
 extern crate serde;
 
+use particle_system::ParticleSpawnSystem;
 use rltk::{GameState, Point, Rltk};
 use specs::{prelude::*, saveload::{SimpleMarker, SimpleMarkerAllocator}};
 
@@ -25,6 +26,7 @@ mod inventory_system;
 mod map_indexing_system;
 mod melee_combat_system;
 mod monster_ai_system;
+mod particle_system;
 mod player;
 mod random_table;
 mod spawner;
@@ -87,8 +89,10 @@ fn main () -> rltk::BError {
     gs.ecs.register::<MeleePowerBonus>();
     gs.ecs.register::<DefenseBonus>();
     gs.ecs.register::<WantsToRemoveItem>();
+    gs.ecs.register::<ParticleLifetime>();
 
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
+    gs.ecs.insert(particle_system::ParticleBuilder::new());
 
     let map: Map = Map::new_map_rooms_and_corridors(1);
     let (player_x, player_y) = map.rooms[0].center();
@@ -143,6 +147,8 @@ impl State {
         drop_items.run_now(&self.ecs);
         let mut item_remove = ItemRemoveSystem {};
         item_remove.run_now(&self.ecs);
+        let mut particles = particle_system::ParticleSpawnSystem {};
+        particles.run_now(&self.ecs);
 
         self.ecs.maintain();
     }
@@ -281,6 +287,7 @@ impl GameState for State {
         }
         // Clear the active console.
         ctx.cls();
+        particle_system::cull_dead_particles(&mut self.ecs, ctx);
 
         // Keeps the system from rendering the map behind the main menu.
         match new_runstate {

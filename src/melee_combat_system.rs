@@ -1,5 +1,7 @@
+use rltk::{BLACK, ORANGE, RGB, to_cp437};
 use specs::prelude::*;
-use super::{components::*, gamelog::GameLog};
+use super::{components::*, gamelog::GameLog, Position,
+            particle_system::ParticleBuilder};
 
 /// Handle for our melee combat system.
 pub struct MeleeCombatSystem {}
@@ -15,6 +17,8 @@ impl<'a> System<'a> for MeleeCombatSystem {
         ReadStorage<'a, MeleePowerBonus>,
         ReadStorage<'a, DefenseBonus>,
         ReadStorage<'a, Equipped>,
+        WriteExpect<'a, ParticleBuilder>,
+        ReadStorage<'a, Position>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
@@ -29,6 +33,8 @@ impl<'a> System<'a> for MeleeCombatSystem {
             melee_power_bonuses,
             defense_bonuses,
             equipped,
+            mut particle_builder,
+            positions,
         ) = data;
 
         for (ent, wants_melee, name, stats) in (&entities, &melee, &names, &combat_stats).join() {
@@ -51,6 +57,14 @@ impl<'a> System<'a> for MeleeCombatSystem {
                             .filter(|(_, equipped_by)| { equipped_by.owner == wants_melee.target })
                             .map(|(d, _)| d)
                             .fold(0, |acc, item| acc + item.defense);
+
+                    // Render some particles to denote combat is ongoing.
+                    if let Some(pos) = positions.get(wants_melee.target) {
+                        particle_builder.request(
+                            pos.x, pos.y, RGB::named(ORANGE), RGB::named(BLACK),
+                            rltk::to_cp437('‼'), 200.0
+                        );
+                    }
 
                     // Calculate damage, accounting for equipment bonuses.
                     let damage = i32::max(
