@@ -55,6 +55,8 @@ impl<'a> System<'a> for ItemUseSystem {
         WriteStorage<'a, InBackpack>,
         WriteExpect<'a, ParticleBuilder>,
         ReadStorage<'a, Position>,
+        ReadStorage<'a, ProvidesFood>,
+        WriteStorage<'a, HungerClock>,
     );
 
     #[allow(clippy::clippy::cognitive_complexity)]
@@ -78,6 +80,8 @@ impl<'a> System<'a> for ItemUseSystem {
             mut backpack,
             mut particle_builder,
             positions,
+            provides_food,
+            mut hunger_clocks,
         ) = data;
 
         for (ent, useitem) in (&entities, &wants_use).join() {
@@ -173,31 +177,21 @@ impl<'a> System<'a> for ItemUseSystem {
                 }
             }
 
-            // Check to see if the item inflicts damage.
-            match inflicts_damage.get(useitem.item) {
-                None => {}
-                // If so, apply damage to the targets we found.
-                Some(damage) => {
-                    item_used = false;
-
-                    // Apply damage to the targets.
-                    for mob in targets.iter() {
-                        SufferDamage::new_damage(&mut suffer, *mob, damage.damage);
-                        if ent == *player_ent {
-                            let mob_name = names.get(*mob).unwrap();
-                            let item_name = names.get(useitem.item).unwrap();
-                            log.entries.push(
-                                format!("You use {} on {}, inflicting {} damage.",
-                                        item_name.name, mob_name.name, damage.damage)
-                            );
-                            // Flash red `‼` on damaged mob.
-                            if let Some(pos) = positions.get(*mob) {
-                                particle_builder.request(
-                                    pos.x, pos.y, RGB::named(RED), RGB::named(BLACK),
-                                    rltk::to_cp437('‼'), 200.0
-                                );
-                            }
-                        } item_used = true;
+            // If the item is food, eat it.
+            match provides_food.get(useitem.item) {
+                // None--item isn't food.
+                None => {},
+                Some(_) => {
+                    // Must consume to get benefit--no regurgitation necessary.
+                    item_used = true;
+                    // Update the hunger clock post-consumption.
+                    if let Some(hc) = hunger_clocks.get_mut(targets[0]) {
+                        hc.state = HungerState::WellFed;
+                        hc.duration = 20;
+                        // Let the user know they ate something.
+                        log.entries.push(
+                            format!("You eat the {}.", names.get(useitem.item).unwrap().name)
+                        );
                     }
                 }
             }
@@ -232,6 +226,35 @@ impl<'a> System<'a> for ItemUseSystem {
                 }
             }
 
+            // Check to see if the item inflicts damage.
+            match inflicts_damage.get(useitem.item) {
+                None => {}
+                // If so, apply damage to the targets we found.
+                Some(damage) => {
+                    item_used = false;
+
+                    // Apply damage to the targets.
+                    for mob in targets.iter() {
+                        SufferDamage::new_damage(&mut suffer, *mob, damage.damage);
+                        if ent == *player_ent {
+                            let mob_name = names.get(*mob).unwrap();
+                            let item_name = names.get(useitem.item).unwrap();
+                            log.entries.push(
+                                format!("You use {} on {}, inflicting {} damage.",
+                                        item_name.name, mob_name.name, damage.damage)
+                            );
+                            // Flash red `‼` on damaged mob.
+                            if let Some(pos) = positions.get(*mob) {
+                                particle_builder.request(
+                                    pos.x, pos.y, RGB::named(RED), RGB::named(BLACK),
+                                    rltk::to_cp437('‼'), 200.0
+                                );
+                            }
+                        } item_used = true;
+                    }
+                }
+            }
+
             // If item has the confusion effect, apply it to the targets.
             // Make a vec to store entities we'll apply confusion to.
             let mut add_confusion = Vec::new();
@@ -261,7 +284,6 @@ impl<'a> System<'a> for ItemUseSystem {
                                 }
                             }
                         }
-                        item_used = true;
                     }
                 }
             }

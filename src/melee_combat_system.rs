@@ -1,4 +1,4 @@
-use rltk::{BLACK, ORANGE, RGB, to_cp437};
+use rltk::{BLACK, ORANGE, RGB};
 use specs::prelude::*;
 use super::{components::*, gamelog::GameLog, Position,
             particle_system::ParticleBuilder};

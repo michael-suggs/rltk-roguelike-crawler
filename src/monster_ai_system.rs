@@ -1,6 +1,6 @@
 use specs::prelude::*;
 use super::{components::*, particle_system::ParticleBuilder, Map, RunState};
-use rltk::{BLACK, MAGENTA, Point, RGB, to_cp437};
+use rltk::{BLACK, MAGENTA, Point, RGB};
 
 pub struct MonsterAI {}
 

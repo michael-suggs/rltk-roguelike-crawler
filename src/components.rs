@@ -168,6 +168,9 @@ pub struct Item {}
 #[derive(Component, Debug, Serialize, Deserialize, Clone)]
 pub struct Consumable {}
 
+#[derive(Component, Debug, Serialize, Deserialize, Clone)]
+pub struct ProvidesFood {}
+
 /// Flag: an item that provides healing.
 #[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct ProvidesHealing {
@@ -195,4 +198,13 @@ pub struct SerializationHelper {
 #[derive(Component, Serialize, Deserialize, Clone)]
 pub struct ParticleLifetime {
     pub lifetime_ms: f32,
+}
+
+#[derive(Serialize, Deserialize, Copy, Clone, PartialEq)]
+pub enum HungerState { WellFed, Normal, Hungry, Starving }
+
+#[derive(Component, Serialize, Deserialize, Clone)]
+pub struct HungerClock {
+    pub state: HungerState,
+    pub duration: i32,
 }

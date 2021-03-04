@@ -1,14 +1,15 @@
 extern crate serde;
 
-use particle_system::ParticleSpawnSystem;
 use rltk::{GameState, Point, Rltk};
 use specs::{prelude::*, saveload::{SimpleMarker, SimpleMarkerAllocator}};
 
 use damage_system::DamageSystem;
+use hunger_system::HungerSystem;
 use inventory_system::{ItemCollectionSystem, ItemUseSystem, ItemDropSystem, ItemRemoveSystem};
 use map_indexing_system::MapIndexingSystem;
 use melee_combat_system::MeleeCombatSystem;
 use monster_ai_system::MonsterAI;
+use particle_system::ParticleSpawnSystem;
 use player::*;
 use visibility_system::VisibilitySystem;
 
@@ -22,6 +23,7 @@ mod rect;
 mod damage_system;
 mod gamelog;
 mod gui;
+mod hunger_system;
 mod inventory_system;
 mod map_indexing_system;
 mod melee_combat_system;
@@ -73,10 +75,12 @@ fn main () -> rltk::BError {
     gs.ecs.register::<Ranged>();
     gs.ecs.register::<AreaOfEffect>();
     gs.ecs.register::<Confusion>();
+    gs.ecs.register::<HungerClock>();
     gs.ecs.register::<InflictsDamage>();
     gs.ecs.register::<SufferDamage>();
     gs.ecs.register::<Item>();
     gs.ecs.register::<Consumable>();
+    gs.ecs.register::<ProvidesFood>();
     gs.ecs.register::<ProvidesHealing>();
     gs.ecs.register::<InBackpack>();
     gs.ecs.register::<WantsToPickupItem>();
@@ -147,8 +151,10 @@ impl State {
         drop_items.run_now(&self.ecs);
         let mut item_remove = ItemRemoveSystem {};
         item_remove.run_now(&self.ecs);
-        let mut particles = particle_system::ParticleSpawnSystem {};
+        let mut particles = ParticleSpawnSystem {};
         particles.run_now(&self.ecs);
+        let mut hunger = HungerSystem {};
+        hunger.run_now(&self.ecs);
 
         self.ecs.maintain();
     }
