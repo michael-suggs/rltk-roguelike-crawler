@@ -19,6 +19,7 @@ impl<'a> System<'a> for MeleeCombatSystem {
         ReadStorage<'a, Equipped>,
         WriteExpect<'a, ParticleBuilder>,
         ReadStorage<'a, Position>,
+        ReadStorage<'a, HungerClock>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
@@ -35,18 +36,24 @@ impl<'a> System<'a> for MeleeCombatSystem {
             equipped,
             mut particle_builder,
             positions,
+            hunger_clock,
         ) = data;
 
         for (ent, wants_melee, name, stats) in (&entities, &melee, &names, &combat_stats).join() {
             // If no HP, combat doesn't make much sense does it
             if stats.hp > 0 {
                 // Get the offensive bonus offered by equipped items.
-                let offense_bonus: i32 =
+                let mut offense_bonus: i32 =
                     (&melee_power_bonuses, &equipped)
                         .join()
                         .filter(|(_, equipped_by)| { equipped_by.owner == ent })
                         .map(|(p, _)| p)
                         .fold(0, |acc, item| acc + item.power);
+
+                // Give a power bonus for being well fed.
+                if let Some(hc) = hunger_clock.get(ent) {
+                    if hc.state == HungerState::WellFed { offense_bonus += 1; }
+                }
 
                 let target_stats = combat_stats.get(wants_melee.target).unwrap();
                 if target_stats.hp > 0 {

@@ -99,6 +99,7 @@ fn skip_turn(ecs: &mut World) -> RunState {
     let monsters = ecs.read_storage::<Monster>();
     let worldmap_res = ecs.fetch::<Map>();
 
+    // Check if mobs are around--can't heal if around enemies.
     let mut can_heal = true;
     let viewshed = viewshed_comp.get(*player_ent).unwrap();
     for tile in viewshed.visible_tiles.iter() {
@@ -108,6 +109,16 @@ fn skip_turn(ecs: &mut World) -> RunState {
                 None => {},
                 Some(_) => { can_heal = false; },
             }
+        }
+    }
+
+    // Stop skip-based healing if the player is hungry or starving.
+    let hunger_clocks = ecs.read_storage::<HungerClock>();
+    if let Some(hc) = hunger_clocks.get(*player_ent) {
+        match hc.state {
+            HungerState:: Hungry => can_heal = false,
+            HungerState::Starving => can_heal = false,
+            _ => {},
         }
     }
 
