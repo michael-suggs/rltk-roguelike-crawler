@@ -1,6 +1,7 @@
 use rltk::*;
 use serde::{Serialize, Deserialize};
 use specs::prelude::*;
+use std::collections::HashSet;
 use std::cmp::{min, max};
 use super::Rect;
 
@@ -28,6 +29,7 @@ pub struct Map {
     pub visible_tiles: Vec<bool>,
     pub blocked: Vec<bool>,
     pub depth: i32,
+    pub bloodstains: HashSet<usize>,
 
     #[serde(skip_serializing)]
     #[serde(skip_deserializing)]
@@ -110,6 +112,7 @@ impl Map {
             blocked: vec![false; MAPCOUNT],
             tile_content: vec![Vec::new(); MAPCOUNT],
             depth: new_depth,
+            bloodstains: HashSet::new(),
         };
 
         const MAX_ROOMS: i32 = 30;
@@ -210,6 +213,7 @@ pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
             // `glyph` and `fg` switches based on TileType.
             let glyph: FontCharType;
             let mut fg: RGB;
+            let mut bg: RGB = RGB::from_f32(0., 0., 0.);
             match tile {
                 TileType::Floor => {
                     glyph = rltk::to_cp437('.');
@@ -224,11 +228,16 @@ pub fn draw_map(ecs: &World, ctx: &mut Rltk) {
                     fg = RGB::from_f32(0., 1., 0.);
                 }
             }
-
             // If tile isn't currently visible (but has been encountered),
             // render it in greyscale.
-            if !map.visible_tiles[idx] { fg = fg.to_greyscale() }
-            ctx.set(x, y, fg, RGB::from_f32(0., 0., 0.), glyph);
+            if !map.visible_tiles[idx] {
+                fg = fg.to_greyscale();
+                bg = RGB::from_f32(0., 0., 0.);
+            } else if map.bloodstains.contains(&idx) {
+                // If this tile is bloodied, render it.
+                bg = RGB::from_f32(0.75, 0., 0.);
+            }
+            ctx.set(x, y, fg, bg, glyph);
         }
 
         // Move the coordinates
