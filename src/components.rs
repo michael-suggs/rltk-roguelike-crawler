@@ -187,14 +187,6 @@ pub struct DefenseBonus {
     pub defense: i32,
 }
 
-#[derive(Component, Debug)]
-pub struct SerializeMe;
-
-#[derive(Component, Serialize, Deserialize, Clone)]
-pub struct SerializationHelper {
-    pub map: super::map::Map,
-}
-
 #[derive(Component, Serialize, Deserialize, Clone)]
 pub struct ParticleLifetime {
     pub lifetime_ms: f32,
@@ -207,4 +199,17 @@ pub enum HungerState { WellFed, Normal, Hungry, Starving }
 pub struct HungerClock {
     pub state: HungerState,
     pub duration: i32,
+}
+
+#[derive(Component, Debug, Serialize, Deserialize, Clone)]
+pub struct MagicMapper {}
+
+
+
+#[derive(Component, Debug)]
+pub struct SerializeMe;
+
+#[derive(Component, Serialize, Deserialize, Clone)]
+pub struct SerializationHelper {
+    pub map: super::map::Map,
 }

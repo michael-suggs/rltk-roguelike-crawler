@@ -49,7 +49,8 @@ pub enum RunState {
     SaveGame,
     NextLevel,
     ShowRemoveItem,
-    GameOver
+    MagicMapReveal { row: i32 },
+    GameOver,
 }
 
 fn main () -> rltk::BError {
@@ -94,6 +95,7 @@ fn main () -> rltk::BError {
     gs.ecs.register::<DefenseBonus>();
     gs.ecs.register::<WantsToRemoveItem>();
     gs.ecs.register::<ParticleLifetime>();
+    gs.ecs.register::<MagicMapper>();
 
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
     gs.ecs.insert(particle_system::ParticleBuilder::new());
@@ -371,7 +373,12 @@ impl GameState for State {
             RunState::PlayerTurn => {
                 self.run_systems();
                 self.ecs.maintain();
-                new_runstate = RunState::MonsterTurn;
+                match *self.ecs.fetch::<RunState>() {
+                    RunState::MagicMapReveal{..} => {
+                        new_runstate = RunState::MagicMapReveal { row: 0 };
+                    },
+                    _ => new_runstate = RunState::MonsterTurn,
+                }
             },
             // Monster's turn to act.
             RunState::MonsterTurn => {
@@ -483,6 +490,20 @@ impl GameState for State {
                 self.goto_next_level();
                 // PreRun on the new level to set everything up and in motion.
                 new_runstate = RunState::PreRun;
+            },
+            RunState::MagicMapReveal{ row  } => {
+                let mut map = self.ecs.fetch_mut::<Map>();
+                (0..MAPWIDTH)
+                    .map(|x| { map.xy_idx(x as i32, row) })
+                    .collect::<Vec<usize>>()
+                    .iter()
+                    .for_each(|idx| map.revealed_tiles[*idx] = true);
+
+                if row as usize == MAPHEIGHT - 1 {
+                    new_runstate = RunState::MonsterTurn;
+                } else {
+                    new_runstate = RunState::MagicMapReveal { row: row + 1 };
+                }
             },
             // Player died.
             RunState::GameOver => {

@@ -1,6 +1,6 @@
 use rltk::{BLACK, GREEN, MAGENTA, ORANGE, RED, RGB};
 use specs::prelude::*;
-use super::{components::*, gamelog::GameLog, Map, particle_system::ParticleBuilder};
+use super::{components::*, gamelog::GameLog, Map, particle_system::ParticleBuilder, RunState};
 
 pub struct ItemCollectionSystem {}
 
@@ -57,6 +57,8 @@ impl<'a> System<'a> for ItemUseSystem {
         ReadStorage<'a, Position>,
         ReadStorage<'a, ProvidesFood>,
         WriteStorage<'a, HungerClock>,
+        ReadStorage<'a, MagicMapper>,
+        WriteExpect<'a, RunState>,
     );
 
     #[allow(clippy::clippy::cognitive_complexity)]
@@ -82,6 +84,8 @@ impl<'a> System<'a> for ItemUseSystem {
             positions,
             provides_food,
             mut hunger_clocks,
+            magic_mapper,
+            mut runstate,
         ) = data;
 
         for (ent, useitem) in (&entities, &wants_use).join() {
@@ -292,6 +296,15 @@ impl<'a> System<'a> for ItemUseSystem {
                 confused
                     .insert(mob.0, Confusion { turns: mob.1 })
                     .expect("Unable to insert status");
+            }
+
+            match magic_mapper.get(useitem.item) {
+                None => {},
+                Some(_) => {
+                    item_used = true;
+                    log.entries.push("The map is revealed to you!".to_string());
+                    *runstate = RunState::MagicMapReveal { row: 0 };
+                }
             }
 
             // Discard consumable items after they have been used.

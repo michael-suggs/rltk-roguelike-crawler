@@ -1,4 +1,4 @@
-use rltk::{RGB, RandomNumberGenerator, to_cp437};
+use rltk::{RGB, RandomNumberGenerator};
 use specs::{prelude::*, saveload::{MarkedBuilder, SimpleMarker}};
 use std::collections::HashMap;
 
@@ -80,6 +80,7 @@ pub fn spawn_room(ecs: &mut World, room: &Rect, map_depth: i32) {
             "Longsword" => longsword(ecs, x, y),
             "Tower Shield" => tower_shield(ecs, x, y),
             "Rations" => rations(ecs, x, y),
+            "Magic Mapping Scroll" => scroll_magic_mapping(ecs, x, y),
             _ => {}
         }
     }
@@ -97,7 +98,8 @@ fn room_table(map_depth: i32) -> RandomTable {
         .add("Shield", 3)
         .add("Longsword", map_depth - 3)
         .add("Tower Shield", map_depth - 3)
-        .add("Rations", 10)
+        .add("Rations", 6)
+        .add("Magic Mapping Scroll", 2)
 }
 
 /// Makes an orc.
@@ -239,6 +241,24 @@ fn scroll_confusion(ecs: &mut World, x: i32, y: i32) {
         .with(Consumable {})
         .with(Ranged { range: 6 })
         .with(Confusion { turns: 4 })
+        .marked::<SimpleMarker<SerializeMe>>()
+        .build();
+}
+
+fn scroll_magic_mapping(ecs: &mut World, x: i32, y: i32) {
+    ecs
+        .create_entity()
+        .with(Position { x, y })
+        .with(Renderable {
+            glyph: rltk::to_cp437('◙'),
+            fg: RGB::named(rltk::SANDY_BROWN),
+            bg: RGB::named(rltk::BLACK),
+            render_order: 2,
+        })
+        .with(Name { name: "Scroll of Magic Mapping".to_string() })
+        .with(Item {})
+        .with(MagicMapper {})
+        .with(Consumable {})
         .marked::<SimpleMarker<SerializeMe>>()
         .build();
 }
