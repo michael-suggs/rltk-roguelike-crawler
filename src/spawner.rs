@@ -1,4 +1,4 @@
-use rltk::{RGB, RandomNumberGenerator};
+use rltk::{RGB, RandomNumberGenerator, SLATE_GREY};
 use specs::{prelude::*, saveload::{MarkedBuilder, SimpleMarker}};
 use std::collections::HashMap;
 
@@ -81,6 +81,7 @@ pub fn spawn_room(ecs: &mut World, room: &Rect, map_depth: i32) {
             "Tower Shield" => tower_shield(ecs, x, y),
             "Rations" => rations(ecs, x, y),
             "Magic Mapping Scroll" => scroll_magic_mapping(ecs, x, y),
+            "Bear Trap" => bear_trap(ecs, x, y),
             _ => {}
         }
     }
@@ -100,6 +101,7 @@ fn room_table(map_depth: i32) -> RandomTable {
         .add("Tower Shield", map_depth - 3)
         .add("Rations", 6)
         .add("Magic Mapping Scroll", 2)
+        .add("Bear Trap", 100)
 }
 
 /// Makes an orc.
@@ -331,6 +333,25 @@ fn tower_shield(ecs: &mut World, x: i32, y: i32) {
         .with(Item {})
         .with(Equippable { slot: EquipmentSlot::Shield })
         .with(DefenseBonus { defense: 3 })
+        .marked::<SimpleMarker<SerializeMe>>()
+        .build();
+}
+
+fn bear_trap(ecs: &mut World, x: i32, y: i32) {
+    ecs
+        .create_entity()
+        .with(Position { x, y })
+        .with(Renderable {
+            glyph: rltk::to_cp437('^'),
+            fg: RGB::named(rltk::GREY),
+            bg: RGB::named(rltk::BLACK),
+            render_order: 2,
+        })
+        .with(Name { name: "Bear Trap".to_string() })
+        .with(Hidden {})
+        .with(EntryTrigger {})
+        .with(SingleActivation {})
+        .with(InflictsDamage { damage: 6 })
         .marked::<SimpleMarker<SerializeMe>>()
         .build();
 }

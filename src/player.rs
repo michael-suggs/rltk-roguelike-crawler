@@ -5,10 +5,11 @@ use std::cmp::{min, max};
 
 /// Tries to move the player by `(delta_x, delta_y)` amount.
 pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
+    let map = ecs.fetch::<Map>();
     let mut positions = ecs.write_storage::<Position>();
     let mut players = ecs.write_storage::<Player>();
     let mut viewsheds = ecs.write_storage::<Viewshed>();
-    let map = ecs.fetch::<Map>();
+    let mut entity_moved = ecs.write_storage::<EntityMoved>();
 
     let combat_stats = ecs.read_storage::<CombatStats>();
     let entities = ecs.entities();
@@ -37,6 +38,8 @@ pub fn try_move_player(delta_x: i32, delta_y: i32, ecs: &mut World) {
         if !map.blocked[dest_idx] {
             pos.x = min(79, max(0, pos.x + delta_x));
             pos.y = min(49, max(0, pos.y + delta_y));
+            entity_moved.insert(ent, EntityMoved {})
+                        .expect("Unable to insert marker");
 
             // If player was moved, viewshed needs to be recalculated.
             viewshed.dirty = true;

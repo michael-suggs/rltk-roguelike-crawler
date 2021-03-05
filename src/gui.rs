@@ -152,6 +152,7 @@ pub fn show_inventory(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Option
     let backpack = gs.ecs.read_storage::<InBackpack>();
     let entities = gs.ecs.entities();
 
+    // Map item names to the number of each in the player's inventory.
     let mut inventory: BTreeMap<String, (i32, specs::world::Index)> = BTreeMap::new();
     for (ent, _, name) in (&entities, &backpack, &names).join().filter(|item| item.1.owner == *player_ent) {
         if let Some((k,v)) = inventory.get_key_value(&name.name) {
@@ -204,6 +205,7 @@ pub fn drop_item_menu(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Option
     let backpack = gs.ecs.read_storage::<InBackpack>();
     let entities = gs.ecs.entities();
 
+    // Map item names to the number of each in the player's inventory.
     let mut inventory: BTreeMap<String, (i32, specs::world::Index)> = BTreeMap::new();
     for (ent, _, name) in (&entities, &backpack, &names).join().filter(|item| item.1.owner == *player_ent) {
         if let Some((k,v)) = inventory.get_key_value(&name.name) {
@@ -348,6 +350,7 @@ fn draw_tooltips(ecs: &World, ctx: &mut Rltk) {
     let map = ecs.fetch::<Map>();
     let names = ecs.read_storage::<Name>();
     let positions = ecs.read_storage::<Position>();
+    let hidden = ecs.read_storage::<Hidden>();
 
     // Make sure the map cursor is actually on the map.
     let mouse_pos = ctx.mouse_pos();
@@ -355,7 +358,7 @@ fn draw_tooltips(ecs: &World, ctx: &mut Rltk) {
 
     // If there's something under the mouse, we'll make a tooltip for it.
     let mut tooltip: Vec<String> = Vec::new();
-    for (name, pos) in (&names, &positions).join() {
+    for (name, pos, _) in (&names, &positions, !&hidden).join() {
         let idx = map.xy_idx(pos.x, pos.y);
         if pos.x == mouse_pos.0 && pos.y == mouse_pos.1 && map.visible_tiles[idx] {
             tooltip.push(name.name.to_string());

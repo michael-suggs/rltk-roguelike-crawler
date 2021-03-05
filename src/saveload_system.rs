@@ -56,9 +56,10 @@ pub fn save_game(ecs: &mut World) {
             ecs, serializer, data, Position, Renderable, Player, Viewshed, Monster,
             Name, BlocksTile, CombatStats, SufferDamage, WantsToMelee, Item, Consumable,
             Ranged, InflictsDamage, AreaOfEffect, Confusion, ProvidesHealing, InBackpack,
-            WantsToPickupItem, WantsToUseItem, WantsToDropItem, SerializationHelper,
-            Equippable, Equipped, ParticleLifetime, HungerClock, ProvidesFood,
-            MagicMapper
+            WantsToPickupItem, WantsToUseItem, WantsToDropItem, WantsToRemoveItem,
+            SerializationHelper, Equippable, Equipped, MeleePowerBonus, DefenseBonus,
+            ParticleLifetime, HungerClock, ProvidesFood, MagicMapper, Hidden, EntryTrigger,
+            EntityMoved, SingleActivation
         );
     }
 
@@ -111,12 +112,13 @@ pub fn load_game(ecs: &mut World) {
         // Call macro on tuple, deserializing each type in turn (done in same
         // order as with saving).
         deserialize_individually!(
-            ecs, de, d, Position, Renderable, Player, Viewshed, Monster, Name,
-            BlocksTile, CombatStats, SufferDamage, WantsToMelee, Item, Consumable,
+            ecs, de, d, Position, Renderable, Player, Viewshed, Monster,
+            Name, BlocksTile, CombatStats, SufferDamage, WantsToMelee, Item, Consumable,
             Ranged, InflictsDamage, AreaOfEffect, Confusion, ProvidesHealing, InBackpack,
-            WantsToPickupItem, WantsToUseItem, WantsToDropItem, SerializationHelper,
-            Equippable, Equipped, ParticleLifetime, HungerClock, ProvidesFood,
-            MagicMapper
+            WantsToPickupItem, WantsToUseItem, WantsToDropItem, WantsToRemoveItem,
+            SerializationHelper, Equippable, Equipped, MeleePowerBonus, DefenseBonus,
+            ParticleLifetime, HungerClock, ProvidesFood, MagicMapper, Hidden, EntryTrigger,
+            EntityMoved, SingleActivation
         );
     }
 
