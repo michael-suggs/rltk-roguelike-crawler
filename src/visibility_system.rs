@@ -1,5 +1,5 @@
 use specs::prelude::*;
-use super::{Map, Player, Position, Viewshed};
+use super::{gamelog::GameLog, Hidden, Map, Name, Player, Position, Viewshed};
 use rltk::{field_of_view, Point};
 
 pub struct VisibilitySystem {}
@@ -12,10 +12,24 @@ impl<'a> System<'a> for VisibilitySystem {
         WriteStorage<'a, Viewshed>,
         WriteStorage<'a, Position>,
         ReadStorage<'a, Player>,
+        WriteStorage<'a, Hidden>,
+        WriteExpect<'a, rltk::RandomNumberGenerator>,
+        WriteExpect<'a, GameLog>,
+        ReadStorage<'a, Name>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (mut map, entities, mut viewshed, pos, player) = data;
+        let (
+            mut map,
+            entities,
+            mut viewshed,
+            pos,
+            player,
+            mut hidden,
+            mut rng,
+            mut log,
+            names,
+        ) = data;
 
         for (ent, viewshed, pos) in (&entities, &mut viewshed, &pos).join() {
             // If player has been moved, update the viewshed.
@@ -37,8 +51,7 @@ impl<'a> System<'a> for VisibilitySystem {
                 );
 
                 // If this is the player, reveal the tiles they can see.
-                let _p: Option<&Player> = player.get(ent);
-                if let Some(_p) = _p {
+                if let Some(_) = player.get(ent) {
                     // Set all to non-visible to start.
                     for t in map.visible_tiles.iter_mut() { *t = false };
                     // Update tiles in our currently visible range.
@@ -46,6 +59,18 @@ impl<'a> System<'a> for VisibilitySystem {
                         let idx = map.xy_idx(vis.x, vis.y);
                         map.revealed_tiles[idx] = true;
                         map.visible_tiles[idx] = true;
+
+                        // Check if there's a hidden entity.
+                        for e in map.tile_content[idx].iter() {
+                            // If there is, then the player has 1d24 chance of spotting it.
+                            if hidden.get(*e).is_some() && rng.roll_dice(1, 24) == 1 {
+                                // They've spotted it--let them know and reveal it.
+                                if let Some(name) = names.get(*e) {
+                                    log.entries.push(format!("You spotted a {}", &name.name));
+                                }
+                                hidden.remove(*e);
+                            }
+                        }
                     }
                 }
             }

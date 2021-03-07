@@ -155,8 +155,8 @@ pub fn show_inventory(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Option
     // Map item names to the number of each in the player's inventory.
     let mut inventory: BTreeMap<String, (i32, specs::world::Index)> = BTreeMap::new();
     for (ent, _, name) in (&entities, &backpack, &names).join().filter(|item| item.1.owner == *player_ent) {
-        if let Some((k,v)) = inventory.get_key_value(&name.name) {
-            inventory.insert(k.clone(), (v.0 + 1, ent.id()));
+        if let Some(val) = inventory.get_mut(&name.name) {
+            *val = (val.0 + 1, ent.id());
         } else {
             inventory.insert(name.name.clone(), (1, ent.id()));
         }
@@ -208,8 +208,8 @@ pub fn drop_item_menu(gs: &mut State, ctx: &mut Rltk) -> (ItemMenuResult, Option
     // Map item names to the number of each in the player's inventory.
     let mut inventory: BTreeMap<String, (i32, specs::world::Index)> = BTreeMap::new();
     for (ent, _, name) in (&entities, &backpack, &names).join().filter(|item| item.1.owner == *player_ent) {
-        if let Some((k,v)) = inventory.get_key_value(&name.name) {
-            inventory.insert(k.clone(), (v.0 + 1, ent.id()));
+        if let Some(val) = inventory.get_mut(&name.name) {
+            *val = (val.0 + 1, ent.id());
         } else {
             inventory.insert(name.name.clone(), (1, ent.id()));
         }
@@ -340,6 +340,9 @@ pub fn ranged_target(gs: &mut State, ctx: &mut Rltk, range: i32) -> (ItemMenuRes
             return (ItemMenuResult::Cancel, None);
         }
     }
+
+    // if ctx.key.and_then(== VirtualKeyCode) == VirtualKeyCode::Escape { return (ItemMenuResult::Cancel, None); }
+    // if let Some(key) = ctx.key { if key == VirtualKeyCode::Escape { return (ItemMenuResult::Cancel, None); } }
 
     (ItemMenuResult::NoResponse, None)
 }

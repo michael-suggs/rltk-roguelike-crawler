@@ -1,4 +1,4 @@
-use rltk::{RGB, RandomNumberGenerator, SLATE_GREY};
+use rltk::{RGB, RandomNumberGenerator};
 use specs::{prelude::*, saveload::{MarkedBuilder, SimpleMarker}};
 use std::collections::HashMap;
 
@@ -55,7 +55,7 @@ pub fn spawn_room(ecs: &mut World, room: &Rect, map_depth: i32) {
 
                 // If spawn point is unoccupied, add it as a new spawn point
                 // then continue to the next.
-                if !spawn_points.contains_key(&idx) {
+                if !spawn_points.contains_key(&idx) && (x as i32, y as i32) != room.center() {
                     spawn_points.insert(idx, spawn_table.roll(&mut rng));
                     added = true;
                 } else {
