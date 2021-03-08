@@ -37,6 +37,21 @@ pub struct Map {
 }
 
 impl Map {
+    pub fn new(new_depth: i32) -> Map {
+        Map {
+            tiles: vec![TileType::Wall; MAPCOUNT],
+            rooms: Vec::new(),
+            width: MAPWIDTH as i32,
+            height: MAPHEIGHT as i32,
+            revealed_tiles: vec![false; MAPCOUNT],
+            visible_tiles: vec![false; MAPCOUNT],
+            blocked: vec![false; MAPCOUNT],
+            tile_content: vec![Vec::new(); MAPCOUNT],
+            depth: new_depth,
+            bloodstains: HashSet::new(),
+        }
+    }
+
     pub fn in_bounds(&self, x: i32, d_x: i32, y: i32, d_y: i32) -> bool {
         x + d_x >= 1 && x + d_x < self.width - 1 && y + d_y >= 1 && y + d_y < self.height - 1
     }
@@ -65,100 +80,6 @@ impl Map {
             content.clear();
         }
     }
-
-    /// Places a rectangular room onto the map.
-    fn apply_room_to_map(&mut self, room: &Rect) {
-        for y in room.y1 + 1 ..= room.y2 {
-            for x in room.x1 + 1 ..= room.x2 {
-                let idx = self.xy_idx(x, y);
-                self.tiles[idx] = TileType::Floor;
-            }
-        }
-    }
-
-    /// Places a horizontal tunnel between two rooms.
-    fn apply_horizontal_tunnel(&mut self, x1: i32, x2: i32, y: i32) {
-        for x in min(x1,x2) ..= max(x1,x2) {
-            let idx = self.xy_idx(x, y);
-            if idx > 0 && idx < MAPCOUNT {
-                self.tiles[idx as usize] = TileType::Floor;
-            }
-        }
-    }
-
-    /// Places a vertical tunnel between two rooms.
-    fn apply_vertical_tunnel(&mut self, y1: i32, y2: i32, x: i32) {
-        for y in min(y1,y2) ..= max(y1,y2) {
-            let idx = self.xy_idx(x, y);
-            if idx > 0 && idx <= MAPCOUNT {
-                self.tiles[idx as usize] = TileType::Floor;
-            }
-        }
-    }
-
-    /// Generates a new map with rooms connected via corridors.
-    ///
-    /// `MAX_ROOMS`: Maximum number of rooms to generate.
-    /// `MIN_SIZE`: Smallest room size to generate.
-    /// `MAX_SIZE`: Largest room size to generate.
-    pub fn new_map_rooms_and_corridors(new_depth: i32) -> Map {
-        let mut map = Map {
-            tiles: vec![TileType::Wall; MAPCOUNT],
-            rooms: Vec::new(),
-            width: MAPWIDTH as i32,
-            height: MAPHEIGHT as i32,
-            revealed_tiles: vec![false; MAPCOUNT],
-            visible_tiles: vec![false; MAPCOUNT],
-            blocked: vec![false; MAPCOUNT],
-            tile_content: vec![Vec::new(); MAPCOUNT],
-            depth: new_depth,
-            bloodstains: HashSet::new(),
-        };
-
-        const MAX_ROOMS: i32 = 30;
-        const MIN_SIZE: i32 = 6;
-        const MAX_SIZE: i32 = 10;
-
-        let mut rng = RandomNumberGenerator::new();
-
-        for _ in 0..MAX_ROOMS {
-            let w = rng.range(MIN_SIZE, MAX_SIZE);
-            let h = rng.range(MIN_SIZE, MAX_SIZE);
-            let x = rng.roll_dice(1, map.width - w - 1) - 1;
-            let y = rng.roll_dice(1, map.height - h - 1) - 1;
-            let new_room = Rect::new(x, y, w, h);
-            let mut ok = true;
-
-            for other_room in map.rooms.iter() {
-                if new_room.intersect(other_room) { ok = false }
-            }
-
-            if ok {
-                map.apply_room_to_map(&new_room);
-
-                if !map.rooms.is_empty() {
-                    let (new_x, new_y) = new_room.center();
-                    let (prev_x, prev_y) = map.rooms.last().unwrap().center();
-                    if rng.range(0,2) == 1 {
-                        map.apply_horizontal_tunnel(prev_x, new_x, prev_y);
-                        map.apply_vertical_tunnel(prev_y, new_y, new_x);
-                    } else {
-                        map.apply_vertical_tunnel(prev_y, new_y, prev_x);
-                        map.apply_horizontal_tunnel(prev_x, new_x, new_y);
-                    }
-                }
-
-                map.rooms.push(new_room);
-            }
-        }
-
-        let stairs_pos = map.rooms.last().unwrap().center();
-        let stairs_idx = map.xy_idx(stairs_pos.0, stairs_pos.1);
-        map.tiles[stairs_idx] = TileType::DownStairs;
-
-        map
-    }
-
 }
 
 impl Algorithm2D for Map {

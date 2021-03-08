@@ -15,16 +15,17 @@ use visibility_system::VisibilitySystem;
 
 pub use components::*;
 pub use map::*;
+pub use map_builder::*;
 pub use rect::Rect;
 
 mod components;
-mod map;
-mod rect;
 mod damage_system;
 mod gamelog;
 mod gui;
 mod hunger_system;
 mod inventory_system;
+mod map;
+mod map_builder;
 mod map_indexing_system;
 mod melee_combat_system;
 mod monster_ai_system;
@@ -32,6 +33,7 @@ mod particle_system;
 mod player;
 mod random_table;
 mod spawner;
+mod rect;
 mod trigger_system;
 mod visibility_system;
 
@@ -105,7 +107,7 @@ fn main () -> rltk::BError {
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
     gs.ecs.insert(particle_system::ParticleBuilder::new());
 
-    let map: Map = Map::new_map_rooms_and_corridors(1);
+    let map: Map = map_builder::build_random_map(1);
     let (player_x, player_y) = map.rooms[0].center();
 
     let player_entity = spawner::player(&mut gs.ecs, player_x, player_y);
@@ -214,7 +216,7 @@ impl State {
         // Build a new map for the next level.
         let worldmap = {
             let mut worldmap_res = self.ecs.write_resource::<Map>();
-            *worldmap_res = Map::new_map_rooms_and_corridors(worldmap_res.depth + 1);
+            *worldmap_res = map_builder::build_random_map(worldmap_res.depth + 1);
             worldmap_res.clone()
         };
 
@@ -257,7 +259,7 @@ impl State {
         // Make a new worldmap and set it as our game's map.
         let worldmap = {
             let mut worldmap_res = self.ecs.write_resource::<Map>();
-            *worldmap_res = Map::new_map_rooms_and_corridors(1);
+            *worldmap_res = map_builder::build_random_map(1);
             worldmap_res.clone()
         };
 

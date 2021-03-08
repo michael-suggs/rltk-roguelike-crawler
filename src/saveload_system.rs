@@ -5,7 +5,7 @@ use specs::{
     error::NoError,
 };
 use std::{fs, fs::File, path::Path};
-use super::components::*;
+use super::{components::*, Map};
 
 macro_rules! serialize_individually {
     ($ecs:expr, $ser:expr, $data:expr, $( $type:ty),*) => {
@@ -37,7 +37,7 @@ pub fn save_game(_ecs: &mut World) {}
 #[cfg(not(target_arch = "wasm32"))]
 pub fn save_game(ecs: &mut World) {
     // Create helper with copy of the game map
-    let mapcopy = ecs.get_mut::<super::map::Map>().unwrap().clone();
+    let mapcopy = ecs.get_mut::<Map>().unwrap().clone();
     let savehelper = ecs
         .create_entity()
         .with(SerializationHelper { map: mapcopy })
@@ -132,10 +132,10 @@ pub fn load_game(ecs: &mut World) {
         // Iterate entities with SerializationHelper component.
         for (e, h) in (&entities, &helper).join() {
             // Replace resource storing the map.
-            let mut worldmap = ecs.write_resource::<super::map::Map>();
+            let mut worldmap = ecs.write_resource::<Map>();
             *worldmap = h.map.clone();
             // `tile_content` isn't serialized, so replace with empty set of vectors.
-            worldmap.tile_content = vec![Vec::new(); super::map::MAPCOUNT];
+            worldmap.tile_content = vec![Vec::new(); super::MAPCOUNT];
             deleteme = Some(e);
         }
 
