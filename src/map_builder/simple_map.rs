@@ -1,7 +1,6 @@
 use rltk::RandomNumberGenerator;
 use specs::prelude::*;
 use crate::{Position, SHOW_MAPGEN_VISUALIZER, spawner};
-
 use super::{common::*, Map, MapBuilder, Rect, TileType};
 
 pub struct SimpleMapBuilder {

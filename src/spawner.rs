@@ -49,8 +49,8 @@ pub fn spawn_room(ecs: &mut World, room: &Rect, map_depth: i32) {
 
             // Try to get an unoccupied spawn point.
             while !added && tries < 20 {
-                let x = (room.x1 + rng.roll_dice(1, i32::abs(room.x2 - room.x1))) as usize;
-                let y = (room.y1 + rng.roll_dice(1, i32::abs(room.y2 - room.y1))) as usize;
+                let x = (room.x1 + rng.roll_dice(1, i32::abs(room.x2 - room.x1)) - 1) as usize;
+                let y = (room.y1 + rng.roll_dice(1, i32::abs(room.y2 - room.y1)) - 1) as usize;
                 let idx = (y * MAPWIDTH) + x;
 
                 // If spawn point is unoccupied, add it as a new spawn point
