@@ -107,18 +107,17 @@ fn main () -> rltk::BError {
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
     gs.ecs.insert(particle_system::ParticleBuilder::new());
 
-    let map: Map = map_builder::build_random_map(1);
-    let (player_x, player_y) = map.rooms[0].center();
-
+    let mut builder = map_builder::random_builder(1);
+    builder.build_map();
+    let (map, player_pos): (Map, Position) = (builder.get_map(), builder.get_starting_position());
+    let (player_x, player_y) = (player_pos.x, player_pos.y);
     let player_entity = spawner::player(&mut gs.ecs, player_x, player_y);
 
     // Generate some monsters.
     // Rolls dice to determine monster type, with orcs having glyph
     // `o` and goblins having glyph `g`.
     gs.ecs.insert(rltk::RandomNumberGenerator::new());
-    for room in map.rooms.iter().skip(1) {
-        spawner::spawn_room(&mut gs.ecs, room, 1);
-    }
+    builder.spawn_entities(&mut gs.ecs);
 
     gs.ecs.insert(map);
     // Gives a readily accessible handle on the player and their position.
@@ -214,19 +213,20 @@ impl State {
         }
 
         // Build a new map for the next level.
-        let worldmap = {
+        let mut builder;
+        let (player_x, player_y) = {
             let mut worldmap_res = self.ecs.write_resource::<Map>();
-            *worldmap_res = map_builder::build_random_map(worldmap_res.depth + 1);
-            worldmap_res.clone()
+            builder = map_builder::random_builder(worldmap_res.depth + 1);
+            builder.build_map();
+            let (newmap, player_start) = (builder.get_map(), builder.get_starting_position());
+            *worldmap_res = newmap;
+            (player_start.x, player_start.y)
         };
 
         // Spawn some enemies.
-        for room in worldmap.rooms.iter().skip(1) {
-            spawner::spawn_room(&mut self.ecs, room, worldmap.depth + 1);
-        }
+        builder.spawn_entities(&mut self.ecs);
 
         // Place the player and update resources.
-        let (player_x, player_y) = worldmap.rooms[0].center();
         let mut player_pos = self.ecs.write_resource::<Point>();
         *player_pos = Point::new(player_x, player_y);
         let player_ent = self.ecs.fetch::<Entity>();
@@ -257,20 +257,20 @@ impl State {
         to_delete.iter().for_each(|e| self.ecs.delete_entity(*e).expect("Deletion failed"));
 
         // Make a new worldmap and set it as our game's map.
-        let worldmap = {
+        let mut builder;
+        let (player_x, player_y) = {
             let mut worldmap_res = self.ecs.write_resource::<Map>();
-            *worldmap_res = map_builder::build_random_map(1);
-            worldmap_res.clone()
+            builder = map_builder::random_builder(1);
+            builder.build_map();
+            let (newmap, player_start) = (builder.get_map(), builder.get_starting_position());
+            *worldmap_res = newmap;
+            (player_start.x, player_start.y)
         };
 
         // Spawn entities in all the rooms for the newly generated map.
-        worldmap.rooms
-            .iter()
-            .skip(1)
-            .for_each(|room| spawner::spawn_room(&mut self.ecs, room, 1));
+        builder.spawn_entities(&mut self.ecs);
 
         // Create a new player and get their intended location.
-        let (player_x, player_y) = worldmap.rooms[0].center();
         let player_ent = spawner::player(&mut self.ecs, player_x, player_y);
         let mut player_pos = self.ecs.write_resource::<Point>();
         *player_pos = Point::new(player_x, player_y);
