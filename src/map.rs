@@ -82,6 +82,14 @@ impl Map {
             content.clear();
         }
     }
+
+    // Iterates (x, y) coordinates in the map.
+    pub fn iter_xy(&self) -> Vec<(i32, i32)> {
+        (1 .. self.height - 1)
+            .flat_map(|y| std::iter::repeat(y).zip(1 .. self.width - 1))
+            .map(|(y, x)| (x, y))
+            .collect::<Vec<(i32, i32)>>()
+    }
 }
 
 impl Algorithm2D for Map {

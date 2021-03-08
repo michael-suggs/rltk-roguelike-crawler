@@ -1,17 +1,16 @@
-use std::iter::repeat;
+use std::{collections::HashMap, iter::repeat};
 
 use rltk::RandomNumberGenerator;
 use specs::prelude::*;
 
-use crate::{Map, MapBuilder, Position, SHOW_MAPGEN_VISUALIZER, TileType};
-
-const MIN_ROOM_SIZE: i32 = 8;
+use crate::{Map, MapBuilder, Position, SHOW_MAPGEN_VISUALIZER, TileType, spawner};
 
 pub struct CellularAutomataBuilder {
     map: Map,
     starting_position: Position,
     depth: i32,
     history: Vec<Map>,
+    noise_areas: HashMap<i32, Vec<usize>>,
 }
 
 impl MapBuilder for CellularAutomataBuilder {
@@ -20,7 +19,7 @@ impl MapBuilder for CellularAutomataBuilder {
     }
 
     fn spawn_entities(&mut self, ecs: &mut World) {
-        todo!()
+        self.noise_areas.iter().for_each(|area| spawner::spawn_region(ecs, area.1, self.depth));
     }
 
     fn get_map(&self) -> Map {
@@ -53,6 +52,7 @@ impl CellularAutomataBuilder {
             starting_position: Position { x: 0, y: 0 },
             depth: new_depth,
             history: Vec::new(),
+            noise_areas: HashMap::new(),
         }
     }
 
@@ -109,8 +109,34 @@ impl CellularAutomataBuilder {
             self.take_snapshot();
         }
 
+        // Locate a place to start the player.
         self.locate_start();
+        // Find a place to put the exit using Dijkstra's.
         self.locate_exit();
+
+        // Make a new noise generator to generate Cellular (Voronoi) noise.
+        let mut noise = rltk::FastNoise::seeded(
+            rng.roll_dice(1, 65536) as u64);
+        noise.set_noise_type(rltk::NoiseType::Cellular);
+        // 0.08 is arbitrary, but seems to work nice.
+        noise.set_frequency(0.08);
+        // Uses L1 distance to favor enlongated shapes.
+        noise.set_cellular_distance_function(rltk::CellularDistanceFunction::Manhattan);
+
+        // Iterate the map
+        for (x, y) in self.map.iter_xy() {
+            let idx = self.map.xy_idx(x, y);
+            // Exclude wall tiles, focus on floors.
+            if self.map.tiles[idx] == TileType::Floor {
+                // Query for a noise value for the current coordinates, and scale to make useful.
+                let cell_value = (noise.get_noise(x as f32, y as f32) * 10240.0) as i32;
+                if self.noise_areas.contains_key(&cell_value) {
+                    self.noise_areas.get_mut(&cell_value).unwrap().push(idx);
+                } else {
+                    self.noise_areas.insert(cell_value, vec![idx]);
+                }
+            }
+        }
     }
 
     /// Finds a starting location relatively close to the center of the map.
