@@ -14,6 +14,13 @@ pub struct Position {
     pub y: i32,
 }
 
+impl From<Position> for (i32, i32) {
+    fn from(p: Position) -> (i32, i32) {
+        let Position { x, y } = p;
+        (x, y)
+    }
+}
+
 /// Component for entities that can be rendered to the screen.
 ///
 /// Entities will be rendered as their glyph, with said glyph having color `fg`
