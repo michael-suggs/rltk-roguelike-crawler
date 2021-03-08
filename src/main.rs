@@ -39,6 +39,8 @@ mod visibility_system;
 
 pub mod saveload_system;
 
+const SHOW_MAPGEN_VISUALIZER: bool = true;
+
 #[derive(PartialEq, Copy, Clone)]
 pub enum RunState {
     AwaitingInput,
@@ -54,6 +56,7 @@ pub enum RunState {
     ShowRemoveItem,
     MagicMapReveal { row: i32 },
     GameOver,
+    MapGeneration,
 }
 
 fn main () -> rltk::BError {
@@ -65,7 +68,15 @@ fn main () -> rltk::BError {
     // Give it a retro vibe, because that's cool.
     context.with_post_scanlines(true);
 
-    let mut gs = State{ ecs: World::new() };
+    let mut gs = State{
+        ecs: World::new(),
+        mapgen_next_state: Some(RunState::MainMenu {
+            menu_selection: gui::MainMenuSelection::NewGame,
+        }),
+        mapgen_index: 0,
+        mapgen_history: Vec::new(),
+        mapgen_timer: 0.0,
+    };
 
     gs.ecs.register::<Position>();
     gs.ecs.register::<Renderable>();
@@ -118,7 +129,8 @@ fn main () -> rltk::BError {
     });
     // Game starts in prerun state to set up systems before beginning.
     gs.ecs.insert(particle_system::ParticleBuilder::new());
-    gs.ecs.insert(RunState::MainMenu { menu_selection: gui::MainMenuSelection::NewGame });
+    // gs.ecs.insert(RunState::MainMenu { menu_selection: gui::MainMenuSelection::NewGame });
+    gs.ecs.insert(RunState::MapGeneration {});
 
     gs.generate_world_map(1);
 
@@ -127,7 +139,11 @@ fn main () -> rltk::BError {
 
 /// Handles game states and transitions.
 pub struct State {
-    pub ecs: World
+    pub ecs: World,
+    mapgen_next_state: Option<RunState>,
+    mapgen_history: Vec<Map>,
+    mapgen_index: usize,
+    mapgen_timer: f32,
 }
 
 impl State {
@@ -162,8 +178,14 @@ impl State {
     }
 
     fn generate_world_map(&mut self, new_depth: i32) {
+        self.mapgen_index = 0;
+        self.mapgen_timer = 0.0;
+        self.mapgen_history.clear();
+
         let mut builder = map_builder::random_builder(new_depth);
         builder.build_map();
+        self.mapgen_history = builder.get_snapshot_history();
+
         let (player_x, player_y) = {
             let mut worldmap_res = self.ecs.write_resource::<Map>();
             *worldmap_res = builder.get_map();
@@ -283,8 +305,9 @@ impl GameState for State {
         match new_runstate {
             RunState::MainMenu{..} => {},
             // If we're not at the main menu, go ahead and render the map.
+            RunState::GameOver{..} => {},
             _ => {
-                draw_map(&self.ecs, ctx);
+                draw_map(&self.ecs.fetch::<Map>(), ctx);
                 {
                     let positions = self.ecs.read_storage::<Position>();
                     let renderables = self.ecs.read_storage::<Renderable>();
@@ -309,6 +332,22 @@ impl GameState for State {
 
         // RunState state machine
         match new_runstate {
+            RunState::MapGeneration => {
+                if !SHOW_MAPGEN_VISUALIZER {
+                    new_runstate = self.mapgen_next_state.unwrap();
+                }
+                ctx.cls();
+                draw_map(&self.mapgen_history[self.mapgen_index], ctx);
+
+                self.mapgen_timer += ctx.frame_time_ms;
+                if self.mapgen_timer > 300.0 {
+                    self.mapgen_timer = 0.0;
+                    self.mapgen_index += 1;
+                    if self.mapgen_index >= self.mapgen_history.len() {
+                        new_runstate = self.mapgen_next_state.unwrap();
+                    }
+                }
+            },
             // At the main menu
             RunState::MainMenu{..} => {
                 match gui::main_menu(self, ctx) {
