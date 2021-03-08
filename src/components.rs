@@ -21,6 +21,12 @@ impl From<Position> for (i32, i32) {
     }
 }
 
+impl From<(i32, i32)> for Position {
+    fn from(t: (i32, i32)) -> Position {
+        Position { x: t.0, y: t.1 }
+    }
+}
+
 /// Component for entities that can be rendered to the screen.
 ///
 /// Entities will be rendered as their glyph, with said glyph having color `fg`

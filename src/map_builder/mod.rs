@@ -1,14 +1,15 @@
 use specs::prelude::World;
 
+use bsp_dungeon::BspDungeonBuilder;
 use simple_map::SimpleMapBuilder;
+use super::{
+    components::Position,
+    map::*
+};
 use super::Rect;
 
-pub use super::{
-    components::Position,
-    map::*,
-};
-
 mod common;
+mod bsp_dungeon;
 mod simple_map;
 
 pub trait MapBuilder {
@@ -21,5 +22,9 @@ pub trait MapBuilder {
 }
 
 pub fn random_builder(new_depth: i32) -> Box<dyn MapBuilder> {
-    Box::new(SimpleMapBuilder::new(new_depth))
+    let mut rng = rltk::RandomNumberGenerator::new();
+    match rng.roll_dice(1, 2) {
+        1 => Box::new(BspDungeonBuilder::new(new_depth)),
+        _ => Box::new(SimpleMapBuilder::new(new_depth)),
+    }
 }
