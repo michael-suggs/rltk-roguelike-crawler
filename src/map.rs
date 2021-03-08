@@ -50,6 +50,10 @@ impl Map {
         }
     }
 
+    pub fn center(&self) -> (i32, i32) {
+        (self.width / 2, self.height / 2)
+    }
+
     pub fn in_bounds(&self, x: i32, d_x: i32, y: i32, d_y: i32) -> bool {
         x + d_x >= 1 && x + d_x < self.width - 1 && y + d_y >= 1 && y + d_y < self.height - 1
     }
