@@ -2,6 +2,7 @@ use specs::prelude::World;
 
 use bsp_dungeon::BspDungeonBuilder;
 use bsp_interior::BspInteriorBuilder;
+use cellular_automata::CellularAutomataBuilder;
 use simple_map::SimpleMapBuilder;
 use super::{
     components::Position,
@@ -9,9 +10,10 @@ use super::{
 };
 use super::Rect;
 
-mod common;
 mod bsp_dungeon;
 mod bsp_interior;
+mod cellular_automata;
+mod common;
 mod simple_map;
 
 pub trait MapBuilder {
@@ -24,10 +26,11 @@ pub trait MapBuilder {
 }
 
 pub fn random_builder(new_depth: i32) -> Box<dyn MapBuilder> {
-    let mut rng = rltk::RandomNumberGenerator::new();
-    match rng.roll_dice(1, 3) {
-        1 => Box::new(SimpleMapBuilder::new(new_depth)),
-        2 => Box::new(BspDungeonBuilder::new(new_depth)),
-        _ => Box::new(BspInteriorBuilder::new(new_depth)),
-    }
+    // let mut rng = rltk::RandomNumberGenerator::new();
+    // match rng.roll_dice(1, 3) {
+    //     1 => Box::new(SimpleMapBuilder::new(new_depth)),
+    //     2 => Box::new(BspDungeonBuilder::new(new_depth)),
+    //     _ => Box::new(BspInteriorBuilder::new(new_depth)),
+    // }
+    Box::new(CellularAutomataBuilder::new(new_depth))
 }
