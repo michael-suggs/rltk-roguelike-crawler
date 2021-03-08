@@ -121,7 +121,7 @@ fn room_table(map_depth: i32) -> RandomTable {
         .add("Tower Shield", map_depth - 3)
         .add("Rations", 6)
         .add("Magic Mapping Scroll", 2)
-        .add("Bear Trap", 100)
+        .add("Bear Trap", 5)
 }
 
 /// Makes an orc.
