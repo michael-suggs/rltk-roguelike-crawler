@@ -5,6 +5,8 @@ use specs::prelude::*;
 
 use crate::{Map, MapBuilder, Position, SHOW_MAPGEN_VISUALIZER, TileType, spawner};
 
+use super::common::{generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant};
+
 pub struct CellularAutomataBuilder {
     map: Map,
     starting_position: Position,
@@ -114,29 +116,31 @@ impl CellularAutomataBuilder {
         // Find a place to put the exit using Dijkstra's.
         self.locate_exit();
 
-        // Make a new noise generator to generate Cellular (Voronoi) noise.
-        let mut noise = rltk::FastNoise::seeded(
-            rng.roll_dice(1, 65536) as u64);
-        noise.set_noise_type(rltk::NoiseType::Cellular);
-        // 0.08 is arbitrary, but seems to work nice.
-        noise.set_frequency(0.08);
-        // Uses L1 distance to favor enlongated shapes.
-        noise.set_cellular_distance_function(rltk::CellularDistanceFunction::Manhattan);
+        self.noise_areas = generate_voronoi_spawn_regions(&self.map, &mut rng);
 
-        // Iterate the map
-        for (x, y) in self.map.iter_xy() {
-            let idx = self.map.xy_idx(x, y);
-            // Exclude wall tiles, focus on floors.
-            if self.map.tiles[idx] == TileType::Floor {
-                // Query for a noise value for the current coordinates, and scale to make useful.
-                let cell_value = (noise.get_noise(x as f32, y as f32) * 10240.0) as i32;
-                if self.noise_areas.contains_key(&cell_value) {
-                    self.noise_areas.get_mut(&cell_value).unwrap().push(idx);
-                } else {
-                    self.noise_areas.insert(cell_value, vec![idx]);
-                }
-            }
-        }
+        // // Make a new noise generator to generate Cellular (Voronoi) noise.
+        // let mut noise = rltk::FastNoise::seeded(
+        //     rng.roll_dice(1, 65536) as u64);
+        // noise.set_noise_type(rltk::NoiseType::Cellular);
+        // // 0.08 is arbitrary, but seems to work nice.
+        // noise.set_frequency(0.08);
+        // // Uses L1 distance to favor enlongated shapes.
+        // noise.set_cellular_distance_function(rltk::CellularDistanceFunction::Manhattan);
+
+        // // Iterate the map
+        // for (x, y) in self.map.iter_xy() {
+        //     let idx = self.map.xy_idx(x, y);
+        //     // Exclude wall tiles, focus on floors.
+        //     if self.map.tiles[idx] == TileType::Floor {
+        //         // Query for a noise value for the current coordinates, and scale to make useful.
+        //         let cell_value = (noise.get_noise(x as f32, y as f32) * 10240.0) as i32;
+        //         if self.noise_areas.contains_key(&cell_value) {
+        //             self.noise_areas.get_mut(&cell_value).unwrap().push(idx);
+        //         } else {
+        //             self.noise_areas.insert(cell_value, vec![idx]);
+        //         }
+        //     }
+        // }
     }
 
     /// Finds a starting location relatively close to the center of the map.
@@ -153,33 +157,41 @@ impl CellularAutomataBuilder {
     fn locate_exit(&mut self) {
         // Make a vector of the player's start (since `DijkstraMap` implements multi-start).
         let start_idx = self.map.xy_idx(self.starting_position.x, self.starting_position.y);
-        let map_starts: Vec<usize> = vec![start_idx];
-        // Make a `DijkstraMap` matching the map dimensions that runs for a max of 200 steps.
-        let dijkstra_map = rltk::DijkstraMap::new(self.map.width, self.map.height,
-            &map_starts, &self.map, 200.0);
+        self.take_snapshot();
+        // let map_starts: Vec<usize> = vec![start_idx];
+        // // Make a `DijkstraMap` matching the map dimensions that runs for a max of 200 steps.
+        // let dijkstra_map = rltk::DijkstraMap::new(self.map.width, self.map.height,
+        //     &map_starts, &self.map, 200.0);
 
-        // `exit_tile` holds the tile index and distance to the proposed exit.
-        let mut exit_tile = (0, 0.0f32);
-        // Enumerate map tiles looking for an exit.
-        self.map.tiles
-            .iter_mut()
-            .enumerate()
-            .for_each(|(i, tile)| {
-                // Found a floor tile--get the distance between it and the start.
-                if *tile == TileType::Floor {
-                    let dist_to_start = dijkstra_map.map[i];
-                    if dist_to_start == std::f32::MAX {
-                        // Unreachable, so might as well make it a wall tile.
-                        *tile = TileType::Wall;
-                    } else if dist_to_start > exit_tile.1 {
-                        // If the new candidate tile is reachable and further that our previous
-                        // best exit candidate, set it's index and distance to the new best.
-                        exit_tile = (i, dist_to_start);
-                    }
-                }
-            });
-        // Visited all tiles--set the exit location and take a snapshot.
-        self.map.tiles[exit_tile.0] = TileType::DownStairs;
+        // // `exit_tile` holds the tile index and distance to the proposed exit.
+        // let mut exit_tile = (0, 0.0f32);
+        // // Enumerate map tiles looking for an exit.
+        // self.map.tiles
+        //     .iter_mut()
+        //     .enumerate()
+        //     .for_each(|(i, tile)| {
+        //         // Found a floor tile--get the distance between it and the start.
+        //         if *tile == TileType::Floor {
+        //             let dist_to_start = dijkstra_map.map[i];
+        //             if dist_to_start == std::f32::MAX {
+        //                 // Unreachable, so might as well make it a wall tile.
+        //                 *tile = TileType::Wall;
+        //             } else if dist_to_start > exit_tile.1 {
+        //                 // If the new candidate tile is reachable and further that our previous
+        //                 // best exit candidate, set it's index and distance to the new best.
+        //                 exit_tile = (i, dist_to_start);
+        //             }
+        //         }
+        //     });
+        // // Visited all tiles--set the exit location and take a snapshot.
+        // self.map.tiles[exit_tile.0] = TileType::DownStairs;
+
+        let exit_tile = remove_unreachable_areas_returning_most_distant(
+            &mut self.map, start_idx
+        );
+        self.take_snapshot();
+
+        self.map.tiles[exit_tile] = TileType::DownStairs;
         self.take_snapshot();
     }
 }

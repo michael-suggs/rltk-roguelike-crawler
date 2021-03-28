@@ -1,5 +1,9 @@
 use super::{Map, Rect, TileType};
-use std::{cmp::{max, min}, iter};
+use std::{
+    cmp::{max, min},
+    collections::HashMap,
+    iter
+};
 
 pub fn apply_room_to_map(map: &mut Map, room: &Rect) {
     (room.y1 + 1 ..= room.y2)
@@ -29,4 +33,57 @@ pub fn apply_vertical_tunnel(map: &mut Map, y1: i32, y2: i32, x: i32) {
                 map.tiles[idx as usize] = TileType::Floor;
             }
         })
+}
+
+pub fn remove_unreachable_areas_returning_most_distant(map: &mut Map, start_idx: usize) -> usize {
+    map.populate_blocked();
+    let map_starts: Vec<usize> = vec![start_idx];
+    let dijkstra = rltk::DijkstraMap::new(
+        map.width as usize,
+        map.height as usize,
+        &map_starts,
+        map,
+        200.0,
+    );
+    let mut exit_tile = (0, 0.0f32);
+
+    map.tiles.iter_mut().enumerate().for_each(|(i, tile)| {
+        if *tile == TileType::Floor {
+            let dist_to_start = dijkstra.map[i];
+            if dist_to_start == std::f32::MAX {
+                *tile = TileType::Wall;
+            } else {
+                if dist_to_start > exit_tile.1 {
+                    exit_tile.0 = i;
+                    exit_tile.1 = dist_to_start;
+                }
+            }
+        }
+    });
+    exit_tile.0
+}
+
+#[allow(clippy::map_entry)]
+pub fn generate_voronoi_spawn_regions(
+    map: &Map, rng: &mut rltk::RandomNumberGenerator
+) -> HashMap<i32, Vec<usize>> {
+    let mut noise_areas: HashMap<i32, Vec<usize>> = HashMap::new();
+    let mut noise = rltk::FastNoise::seeded(rng.roll_dice(1, 65536) as u64);
+    noise.set_noise_type(rltk::NoiseType::Cellular);
+    noise.set_frequency(0.08);
+    noise.set_cellular_distance_function(rltk::CellularDistanceFunction::Manhattan);
+
+    map.iter_xy().iter().for_each(|(x, y)| {
+        let idx = map.xy_idx(*x, *y);
+        if map.tiles[idx] == TileType::Floor {
+            let cell_value = (noise.get_noise(*x as f32, *y as f32) * 10240.0) as i32;
+            if noise_areas.contains_key(&cell_value) {
+                noise_areas.get_mut(&cell_value).unwrap().push(idx);
+            } else {
+                noise_areas.insert(cell_value, vec![idx]);
+            }
+        }
+    });
+
+    noise_areas
 }

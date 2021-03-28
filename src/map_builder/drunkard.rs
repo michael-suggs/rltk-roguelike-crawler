@@ -4,6 +4,10 @@ use rltk::RandomNumberGenerator;
 use specs::prelude::*;
 
 use crate::{spawner, SHOW_MAPGEN_VISUALIZER};
+use super::common::{
+    remove_unreachable_areas_returning_most_distant,
+    generate_voronoi_spawn_regions
+};
 use super::{MapBuilder, Map, TileType, Position};
 
 pub struct DrunkardsWalkBuilder {
@@ -76,41 +80,12 @@ impl DrunkardsWalkBuilder {
             200.0,
         );
 
-        let mut exit_tile = (0, 0.0f32);
-        self.map.tiles.iter_mut().enumerate().for_each(|(i, tile)| {
-            if *tile == TileType::Floor {
-                let dist_to_start = dijkstra.map[i];
-                if dist_to_start == std::f32::MAX {
-                    *tile = TileType::Wall;
-                } else {
-                    if dist_to_start > exit_tile.1 {
-                        exit_tile.0 = i;
-                        exit_tile.1 = dist_to_start;
-                    }
-                }
-            }
-        });
-
-        self.take_snapshot();
-        self.map.tiles[exit_tile.0] = TileType::DownStairs;
+        let exit_tile = remove_unreachable_areas_returning_most_distant(&mut self.map, start_idx);
         self.take_snapshot();
 
-        let mut noise = rltk::FastNoise::seeded(rng.roll_dice(1, 65536) as u64);
-        noise.set_noise_type(rltk::NoiseType::Cellular);
-        noise.set_frequency(0.08);
-        noise.set_cellular_distance_function(rltk::CellularDistanceFunction::Manhattan);
+        self.map.tiles[exit_tile] = TileType::DownStairs;
+        self.take_snapshot();
 
-        self.map.iter_xy().iter_mut()
-            .for_each(|(x,y)| {
-                let idx = self.map.xy_idx(*x, *y);
-                if self.map.tiles[idx] == TileType::Floor {
-                    let cell_value = (noise.get_noise(*x as f32, *y as f32) * 10240.0) as i32;
-                    if self.noise_areas.contains_key(&cell_value) {
-                        self.noise_areas.get_mut(&cell_value).unwrap().push(idx);
-                    } else {
-                        self.noise_areas.insert(cell_value, vec![idx]);
-                    }
-                }
-            })
+        self.noise_areas = generate_voronoi_spawn_regions(&self.map, &mut rng);
     }
 }
