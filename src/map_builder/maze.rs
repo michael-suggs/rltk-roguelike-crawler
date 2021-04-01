@@ -198,12 +198,15 @@ impl<'a> Grid<'a> {
     }
 
     fn generate_maze(&mut self, generator: &mut MazeBuilder) {
+        let mut i = 0;
         loop {
+            // Mark current cell as visited and get the next cell
             self.cells[self.current].visited = true;
             let next = self.find_next_cell();
 
             match next {
                 Some(next) => {
+                    // Mark next as visited and push the current onto the backtrace stack
                     self.cells[next].visited = true;
                     self.backtrace.push(self.current);
 
@@ -224,8 +227,12 @@ impl<'a> Grid<'a> {
                 }
             }
 
-            self.copy_to_map(&mut generator.map);
-            generator.take_snapshot();
+            if i % 50 == 0 {
+                self.copy_to_map(&mut generator.map);
+                generator.take_snapshot();
+            }
+
+            i += 1;
         }
     }
 
