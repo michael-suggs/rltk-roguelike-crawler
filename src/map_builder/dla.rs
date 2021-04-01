@@ -99,12 +99,12 @@ impl DLABuilder {
             .filter(|t| **t == TileType::Floor)
             .count();
 
-        while floor_tile_count < desired_floor_tiles {
-            match self.algorithm {
-                DLAAlgorithm::WalkInwards => {
-                    self.walk_inwards(&mut floor_tile_count, &desired_floor_tiles, &mut rng)
-                }
-                _ => {}
+        match self.algorithm {
+            DLAAlgorithm::WalkInwards => {
+                self.walk_inwards(floor_tile_count, desired_floor_tiles, &mut rng)
+            }
+            _ => {
+                todo!()
             }
         }
     }
@@ -124,11 +124,12 @@ impl DLABuilder {
 
     fn walk_inwards(
         &mut self,
-        floor_tile_count: &mut usize,
-        desired_floor_tiles: &usize,
+        floor_tile_count: usize,
+        desired_floor_tiles: usize,
         rng: &mut RandomNumberGenerator,
     ) {
-        while *floor_tile_count < *desired_floor_tiles {
+        let mut floor_tile_count = floor_tile_count;
+        while floor_tile_count < desired_floor_tiles {
             let mut drunk = DrunkDigger::new(
                 rng.roll_dice(1, self.map.width - 3) + 1,
                 rng.roll_dice(1, self.map.height - 3) + 1,
@@ -137,6 +138,12 @@ impl DLABuilder {
 
             let (prev_x, prev_y) = drunk.stagger_tiles(&mut self.map);
             self.paint(prev_x, prev_y);
+            floor_tile_count = self
+                .map
+                .tiles
+                .iter()
+                .filter(|t| **t == TileType::Floor)
+                .count();
         }
     }
 }
