@@ -3,8 +3,9 @@ use specs::prelude::World;
 use bsp_dungeon::BspDungeonBuilder;
 use bsp_interior::BspInteriorBuilder;
 use cellular_automata::CellularAutomataBuilder;
-use drunkard::DrunkardsWalkBuilder;
+use drunkard::{DrunkardsWalkBuilder, DrunkardSettings, DrunkSpawnMode};
 use simple_map::SimpleMapBuilder;
+
 use super::{
     components::Position,
     map::*
@@ -34,6 +35,9 @@ pub fn random_builder(new_depth: i32) -> Box<dyn MapBuilder> {
         // 2 => Box::new(BspDungeonBuilder::new(new_depth)),
         // 3 => Box::new(BspInteriorBuilder::new(new_depth)),
         // 4 => Box::new(CellularAutomataBuilder::new(new_depth)),
-        _ => Box::new(DrunkardsWalkBuilder::new(new_depth)),
+        _ => Box::new(DrunkardsWalkBuilder::new(
+            new_depth,
+            DrunkardSettings { spawn_mode: DrunkSpawnMode::StartingPoint },
+        )),
     }
 }

@@ -10,12 +10,18 @@ use super::common::{
 };
 use super::{MapBuilder, Map, TileType, Position};
 
+#[derive(PartialEq, Copy, Clone)]
+pub enum DrunkSpawnMode { StartingPoint, Random }
+
+pub struct DrunkardSettings { pub spawn_mode: DrunkSpawnMode }
+
 pub struct DrunkardsWalkBuilder {
     map: Map,
     starting_position: Position,
     depth: i32,
     history: Vec<Map>,
     noise_areas: HashMap<i32, Vec<usize>>,
+    settings: DrunkardSettings,
 }
 
 impl MapBuilder for DrunkardsWalkBuilder {
@@ -54,13 +60,14 @@ impl MapBuilder for DrunkardsWalkBuilder {
 }
 
 impl DrunkardsWalkBuilder {
-    pub fn new(new_depth: i32) -> DrunkardsWalkBuilder {
+    pub fn new(new_depth: i32, settings: DrunkardSettings) -> DrunkardsWalkBuilder {
         DrunkardsWalkBuilder {
             map: Map::new(new_depth),
             starting_position: Position { x: 0, y: 0 },
             depth: new_depth,
             history: Vec::new(),
             noise_areas: HashMap::new(),
+            settings,
         }
     }
 
