@@ -96,7 +96,7 @@ impl DLABuilder {
         match self.algorithm {
             DLAAlgorithm::WalkInwards => self.walk_inwards(desired_floor_tiles, &mut rng),
             DLAAlgorithm::WalkOutwards => self.walk_outwards(desired_floor_tiles, &mut rng),
-            _ => todo!(),
+            DLAAlgorithm::CentralAttractor => self.central_attractor(desired_floor_tiles, &mut rng),
         }
     }
 
@@ -138,5 +138,36 @@ impl DLABuilder {
         }
 
         self.paint(drunk.x, drunk.y);
+    }
+
+    fn central_attractor(&mut self, desired_floor_tiles: usize, rng: &mut RandomNumberGenerator) {
+        let mut floor_tile_count = self.map.count_floor_tiles();
+        while floor_tile_count < desired_floor_tiles {
+            let mut digger = Position {
+                x: rng.roll_dice(1, self.map.width - 3) + 1,
+                y: rng.roll_dice(1, self.map.height - 3) + 1,
+            };
+            let mut prev = digger.clone();
+            let mut digger_idx = self.map.xy_idx(digger.x, digger.y);
+
+            let mut path = rltk::line2d(
+                rltk::LineAlg::Bresenham,
+                rltk::Point::new(digger.x, digger.y),
+                rltk::Point::new(self.starting_position.x, self.starting_position.y),
+            );
+
+            while self.map.tiles[digger_idx] == TileType::Wall && !path.is_empty() {
+                prev = digger;
+                digger = Position {
+                    x: path[0].x,
+                    y: path[0].y,
+                };
+                path.remove(0);
+                digger_idx = self.map.xy_idx(digger.x, digger.y);
+            }
+
+            self.paint(prev.x, prev.y);
+            floor_tile_count = self.map.count_floor_tiles();
+        }
     }
 }
