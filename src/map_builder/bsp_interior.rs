@@ -1,7 +1,7 @@
+use super::{Map, MapBuilder, Position, Rect, TileType};
+use crate::{spawner, SHOW_MAPGEN_VISUALIZER};
 use rltk::RandomNumberGenerator;
 use specs::prelude::*;
-use crate::{SHOW_MAPGEN_VISUALIZER, spawner};
-use super::{Map, MapBuilder, Position, Rect, TileType};
 
 const MIN_ROOM_SIZE: i32 = 8;
 
@@ -41,9 +41,7 @@ impl MapBuilder for BspInteriorBuilder {
     fn take_snapshot(&mut self) {
         if SHOW_MAPGEN_VISUALIZER {
             let mut snapshot = self.map.clone();
-            snapshot.revealed_tiles
-                    .iter_mut()
-                    .for_each(|v| *v = true);
+            snapshot.revealed_tiles.iter_mut().for_each(|v| *v = true);
             self.history.push(snapshot);
         }
     }
@@ -68,7 +66,8 @@ impl BspInteriorBuilder {
         // If any rects are hanging around, clear them
         self.rects.clear();
         // Start with the whole map as a room
-        self.rects.push(Rect::new(1, 1, self.map.width - 2, self.map.height - 2));
+        self.rects
+            .push(Rect::new(1, 1, self.map.width - 2, self.map.height - 2));
         // Build subrects for our first room
         self.add_subrects(self.rects[0], &mut rng);
 
@@ -78,8 +77,8 @@ impl BspInteriorBuilder {
             let room = *r;
             // Add it to the list of rooms and carve it out of the map
             self.rooms.push(room);
-            for y in room.y1 .. room.y2 {
-                for x in room.x1 .. room.x2 {
+            for y in room.y1..room.y2 {
+                for x in room.x1..room.x2 {
                     let idx = self.map.xy_idx(x, y);
                     if idx > 0 && idx < ((self.map.width * self.map.height) - 1) as usize {
                         self.map.tiles[idx] = TileType::Floor;
@@ -126,27 +125,35 @@ impl BspInteriorBuilder {
         if split <= 2 {
             // Split horizontally
             // Build and add h1 (the left partition) to the rect list
-            let h1 = Rect::new( rect.x1, rect.y1, half_width - 1, rect.height());
+            let h1 = Rect::new(rect.x1, rect.y1, half_width - 1, rect.height());
             self.rects.push(h1);
             // If room left to split h1, recursively split it again
-            if half_width > MIN_ROOM_SIZE { self.add_subrects(h1, rng); }
+            if half_width > MIN_ROOM_SIZE {
+                self.add_subrects(h1, rng);
+            }
             // Build and add h2 (the right partition) to the rect list
             let h2 = Rect::new(rect.x1 + half_width, rect.y1, half_width, rect.height());
             self.rects.push(h2);
             // If room left to split h2, recursively split it again
-            if half_width > MIN_ROOM_SIZE { self.add_subrects(h2, rng); }
+            if half_width > MIN_ROOM_SIZE {
+                self.add_subrects(h2, rng);
+            }
         } else {
             // Split vertically
             // Build and add v1 (the top partition) to the rect list
             let v1 = Rect::new(rect.x1, rect.y1, rect.width(), half_height - 1);
             self.rects.push(v1);
             // If room left to split v1, recursively split it again
-            if half_height > MIN_ROOM_SIZE { self.add_subrects(v1, rng); }
+            if half_height > MIN_ROOM_SIZE {
+                self.add_subrects(v1, rng);
+            }
             // Build and add v2 (the bottom partition) to the rect list
             let v2 = Rect::new(rect.x1, rect.y1 + half_height, rect.width(), half_height);
             self.rects.push(v2);
             // If room left to split v2, recursively split it again
-            if half_height > MIN_ROOM_SIZE { self.add_subrects(v2, rng); }
+            if half_height > MIN_ROOM_SIZE {
+                self.add_subrects(v2, rng);
+            }
         }
     }
 

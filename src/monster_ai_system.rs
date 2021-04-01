@@ -1,6 +1,6 @@
-use specs::prelude::*;
 use super::{components::*, particle_system::ParticleBuilder, Map, RunState};
-use rltk::{BLACK, MAGENTA, Point, RGB};
+use rltk::{Point, BLACK, MAGENTA, RGB};
+use specs::prelude::*;
 
 pub struct MonsterAI {}
 
@@ -41,11 +41,14 @@ impl<'a> System<'a> for MonsterAI {
         ) = data;
 
         // If it's not the monster's turn, immediately return.
-        if *runstate != RunState::MonsterTurn { return; }
+        if *runstate != RunState::MonsterTurn {
+            return;
+        }
 
         // Else, do the AI.
-        for (ent, mut viewshed, _monster, mut pos)
-                in (&entities, &mut viewshed, &monster, &mut position).join() {
+        for (ent, mut viewshed, _monster, mut pos) in
+            (&entities, &mut viewshed, &monster, &mut position).join()
+        {
             // Check to see if the mob is confused.
             let mut can_act = true;
             if let Some(am_confused) = confused.get_mut(ent) {
@@ -53,32 +56,43 @@ impl<'a> System<'a> for MonsterAI {
                 am_confused.turns -= 1;
                 // If they're no longer confused, take them out of confused;
                 // will be able to act on their next turn.
-                if am_confused.turns < 1 { confused.remove(ent); }
+                if am_confused.turns < 1 {
+                    confused.remove(ent);
+                }
                 // Confused--can't act.
                 can_act = false;
                 // Play the confusion particle effect for each confused turn.
                 particle_builder.request(
-                    pos.x, pos.y, RGB::named(MAGENTA), RGB::named(BLACK),
-                    rltk::to_cp437('?'), 200.0
+                    pos.x,
+                    pos.y,
+                    RGB::named(MAGENTA),
+                    RGB::named(BLACK),
+                    rltk::to_cp437('?'),
+                    200.0,
                 );
             }
 
             // If they're not confused, let them act as normal.
             if can_act {
-                let distance = rltk::DistanceAlg::Pythagoras.distance2d(
-                    Point::new(pos.x, pos.y), *player_pos);
+                let distance =
+                    rltk::DistanceAlg::Pythagoras.distance2d(Point::new(pos.x, pos.y), *player_pos);
 
                 // If player is in melee range, initiate combat
                 if distance < 1.5 {
                     wants_to_melee
-                        .insert(ent, WantsToMelee { target: *player_entity })
+                        .insert(
+                            ent,
+                            WantsToMelee {
+                                target: *player_entity,
+                            },
+                        )
                         .expect("Unable to insert attack");
                 } else if viewshed.visible_tiles.contains(&*player_pos) {
                     // If player is visible, get path to them with A*.
                     let path = rltk::a_star_search(
                         map.xy_idx(pos.x, pos.y) as i32,
                         map.xy_idx(player_pos.x, player_pos.y) as i32,
-                        &mut *map
+                        &mut *map,
                     );
 
                     // If path is found, take a step and recalculate the viewshed.
@@ -91,8 +105,9 @@ impl<'a> System<'a> for MonsterAI {
                         idx = map.xy_idx(pos.x, pos.y);
                         map.blocked[idx] = true;
                         viewshed.dirty = true;
-                        entity_moved.insert(ent, EntityMoved {})
-                                    .expect("Unable to insert marker");
+                        entity_moved
+                            .insert(ent, EntityMoved {})
+                            .expect("Unable to insert marker");
                     }
                 }
             }

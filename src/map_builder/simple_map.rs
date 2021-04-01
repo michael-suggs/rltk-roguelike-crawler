@@ -1,7 +1,7 @@
+use super::{common::*, Map, MapBuilder, Rect, TileType};
+use crate::{spawner, Position, SHOW_MAPGEN_VISUALIZER};
 use rltk::RandomNumberGenerator;
 use specs::prelude::*;
-use crate::{Position, SHOW_MAPGEN_VISUALIZER, spawner};
-use super::{common::*, Map, MapBuilder, Rect, TileType};
 
 pub struct SimpleMapBuilder {
     map: Map,
@@ -17,7 +17,8 @@ impl MapBuilder for SimpleMapBuilder {
     }
 
     fn spawn_entities(&mut self, ecs: &mut World) {
-        &self.rooms
+        &self
+            .rooms
             .iter()
             .skip(1)
             .for_each(|room| spawner::spawn_room(ecs, room, self.depth));
@@ -82,7 +83,7 @@ impl SimpleMapBuilder {
                 if !self.rooms.is_empty() {
                     let (new_x, new_y) = new_room.center();
                     let (prev_x, prev_y) = self.rooms.last().unwrap().center();
-                    if rng.range(0,2) == 1 {
+                    if rng.range(0, 2) == 1 {
                         apply_horizontal_tunnel(&mut self.map, prev_x, new_x, prev_y);
                         apply_vertical_tunnel(&mut self.map, prev_y, new_y, new_x);
                     } else {
@@ -101,6 +102,9 @@ impl SimpleMapBuilder {
         self.map.tiles[stairs_idx] = TileType::DownStairs;
 
         let start_pos = self.rooms[0].center();
-        self.starting_position = Position { x: start_pos.0, y: start_pos.1 };
+        self.starting_position = Position {
+            x: start_pos.0,
+            y: start_pos.1,
+        };
     }
 }

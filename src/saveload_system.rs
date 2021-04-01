@@ -1,11 +1,13 @@
+use super::{components::*, Map};
 use specs::{
-    prelude::*,
-    saveload::{SimpleMarker, SimpleMarkerAllocator, SerializeComponents,
-               DeserializeComponents, MarkedBuilder},
     error::NoError,
+    prelude::*,
+    saveload::{
+        DeserializeComponents, MarkedBuilder, SerializeComponents, SimpleMarker,
+        SimpleMarkerAllocator,
+    },
 };
 use std::{fs, fs::File, path::Path};
-use super::{components::*, Map};
 
 macro_rules! serialize_individually {
     ($ecs:expr, $ser:expr, $data:expr, $( $type:ty),*) => {
@@ -48,18 +50,49 @@ pub fn save_game(ecs: &mut World) {
     {
         let data = (
             ecs.entities(),
-            ecs.read_storage::<SimpleMarker<SerializeMe>>()
+            ecs.read_storage::<SimpleMarker<SerializeMe>>(),
         );
         let writer = File::create("./savegame.json").unwrap();
         let mut serializer = serde_json::Serializer::new(writer);
         serialize_individually!(
-            ecs, serializer, data, Position, Renderable, Player, Viewshed, Monster,
-            Name, BlocksTile, CombatStats, SufferDamage, WantsToMelee, Item, Consumable,
-            Ranged, InflictsDamage, AreaOfEffect, Confusion, ProvidesHealing, InBackpack,
-            WantsToPickupItem, WantsToUseItem, WantsToDropItem, WantsToRemoveItem,
-            SerializationHelper, Equippable, Equipped, MeleePowerBonus, DefenseBonus,
-            ParticleLifetime, HungerClock, ProvidesFood, MagicMapper, Hidden, EntryTrigger,
-            EntityMoved, SingleActivation
+            ecs,
+            serializer,
+            data,
+            Position,
+            Renderable,
+            Player,
+            Viewshed,
+            Monster,
+            Name,
+            BlocksTile,
+            CombatStats,
+            SufferDamage,
+            WantsToMelee,
+            Item,
+            Consumable,
+            Ranged,
+            InflictsDamage,
+            AreaOfEffect,
+            Confusion,
+            ProvidesHealing,
+            InBackpack,
+            WantsToPickupItem,
+            WantsToUseItem,
+            WantsToDropItem,
+            WantsToRemoveItem,
+            SerializationHelper,
+            Equippable,
+            Equipped,
+            MeleePowerBonus,
+            DefenseBonus,
+            ParticleLifetime,
+            HungerClock,
+            ProvidesFood,
+            MagicMapper,
+            Hidden,
+            EntryTrigger,
+            EntityMoved,
+            SingleActivation
         );
     }
 
@@ -112,13 +145,44 @@ pub fn load_game(ecs: &mut World) {
         // Call macro on tuple, deserializing each type in turn (done in same
         // order as with saving).
         deserialize_individually!(
-            ecs, de, d, Position, Renderable, Player, Viewshed, Monster,
-            Name, BlocksTile, CombatStats, SufferDamage, WantsToMelee, Item, Consumable,
-            Ranged, InflictsDamage, AreaOfEffect, Confusion, ProvidesHealing, InBackpack,
-            WantsToPickupItem, WantsToUseItem, WantsToDropItem, WantsToRemoveItem,
-            SerializationHelper, Equippable, Equipped, MeleePowerBonus, DefenseBonus,
-            ParticleLifetime, HungerClock, ProvidesFood, MagicMapper, Hidden, EntryTrigger,
-            EntityMoved, SingleActivation
+            ecs,
+            de,
+            d,
+            Position,
+            Renderable,
+            Player,
+            Viewshed,
+            Monster,
+            Name,
+            BlocksTile,
+            CombatStats,
+            SufferDamage,
+            WantsToMelee,
+            Item,
+            Consumable,
+            Ranged,
+            InflictsDamage,
+            AreaOfEffect,
+            Confusion,
+            ProvidesHealing,
+            InBackpack,
+            WantsToPickupItem,
+            WantsToUseItem,
+            WantsToDropItem,
+            WantsToRemoveItem,
+            SerializationHelper,
+            Equippable,
+            Equipped,
+            MeleePowerBonus,
+            DefenseBonus,
+            ParticleLifetime,
+            HungerClock,
+            ProvidesFood,
+            MagicMapper,
+            Hidden,
+            EntryTrigger,
+            EntityMoved,
+            SingleActivation
         );
     }
 
@@ -149,5 +213,6 @@ pub fn load_game(ecs: &mut World) {
         }
     }
 
-    ecs.delete_entity(deleteme.unwrap()).expect("Unable to delete helper");
+    ecs.delete_entity(deleteme.unwrap())
+        .expect("Unable to delete helper");
 }

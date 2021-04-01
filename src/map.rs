@@ -1,5 +1,5 @@
 use rltk::*;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use specs::prelude::*;
 use std::collections::HashSet;
 
@@ -10,7 +10,9 @@ pub const MAPCOUNT: usize = MAPHEIGHT * MAPWIDTH;
 /// Enum differentiating floor tiles from wall tiles.
 #[derive(PartialEq, Copy, Clone, Serialize, Deserialize)]
 pub enum TileType {
-    Wall, Floor, DownStairs
+    Wall,
+    Floor,
+    DownStairs,
 }
 
 /// Structure for holding game map-related information.
@@ -66,7 +68,9 @@ impl Map {
 
     /// Determines if an index can be entered (is not blocked).
     fn is_exit_valid(&self, x: i32, y: i32) -> bool {
-        if x < 1 || x > self.width-1 || y < 1 || y > self.height-1 { return false; }
+        if x < 1 || x > self.width - 1 || y < 1 || y > self.height - 1 {
+            return false;
+        }
         let idx = self.xy_idx(x, y);
         !self.blocked[idx]
     }
@@ -87,8 +91,8 @@ impl Map {
 
     // Iterates (x, y) coordinates in the map.
     pub fn iter_xy(&self) -> Vec<(i32, i32)> {
-        (1 .. self.height - 1)
-            .flat_map(|y| std::iter::repeat(y).zip(1 .. self.width - 1))
+        (1..self.height - 1)
+            .flat_map(|y| std::iter::repeat(y).zip(1..self.width - 1))
             .map(|(y, x)| (x, y))
             .collect::<Vec<(i32, i32)>>()
     }
@@ -120,16 +124,32 @@ impl BaseMap for Map {
         let w = self.width as usize;
 
         // Cardinal directions
-        if self.is_exit_valid(x-1, y) { exits.push((idx-1, 1.)) };
-        if self.is_exit_valid(x+1, y) { exits.push((idx+1, 1.)) };
-        if self.is_exit_valid(x, y-1) { exits.push((idx-w, 1.)) };
-        if self.is_exit_valid(x, y+1) { exits.push((idx+w, 1.)) };
+        if self.is_exit_valid(x - 1, y) {
+            exits.push((idx - 1, 1.))
+        };
+        if self.is_exit_valid(x + 1, y) {
+            exits.push((idx + 1, 1.))
+        };
+        if self.is_exit_valid(x, y - 1) {
+            exits.push((idx - w, 1.))
+        };
+        if self.is_exit_valid(x, y + 1) {
+            exits.push((idx + w, 1.))
+        };
 
         // Diagonal directions
-        if self.is_exit_valid(x-1, y-1) { exits.push(((idx-w)-1, 1.45)); }
-        if self.is_exit_valid(x+1, y-1) { exits.push(((idx-w)+1, 1.45)); }
-        if self.is_exit_valid(x-1, y+1) { exits.push(((idx+w)-1, 1.45)); }
-        if self.is_exit_valid(x+1, y+1) { exits.push(((idx+w)+1, 1.45)); }
+        if self.is_exit_valid(x - 1, y - 1) {
+            exits.push(((idx - w) - 1, 1.45));
+        }
+        if self.is_exit_valid(x + 1, y - 1) {
+            exits.push(((idx - w) + 1, 1.45));
+        }
+        if self.is_exit_valid(x - 1, y + 1) {
+            exits.push(((idx + w) - 1, 1.45));
+        }
+        if self.is_exit_valid(x + 1, y + 1) {
+            exits.push(((idx + w) + 1, 1.45));
+        }
 
         exits
     }
@@ -151,11 +171,11 @@ pub fn draw_map(map: &Map, ctx: &mut Rltk) {
                 TileType::Floor => {
                     glyph = rltk::to_cp437('.');
                     fg = RGB::from_f32(0.0, 0.5, 0.5);
-                },
+                }
                 TileType::Wall => {
                     glyph = wall_glyph(&*map, x, y);
                     fg = RGB::from_f32(0., 1., 0.);
-                },
+                }
                 TileType::DownStairs => {
                     glyph = rltk::to_cp437('>');
                     fg = RGB::from_f32(0., 1., 0.);
@@ -185,33 +205,43 @@ pub fn draw_map(map: &Map, ctx: &mut Rltk) {
 /// Applies bitmask to TileType.
 fn wall_glyph(map: &Map, x: i32, y: i32) -> rltk::FontCharType {
     // Stay in the map bounds, please.
-    if x < 1 || x > map.width-2 || y < 1 || y > map.height-2 as i32 { return 35; }
+    if x < 1 || x > map.width - 2 || y < 1 || y > map.height - 2 as i32 {
+        return 35;
+    }
 
     // 4-bit bitmask, since four directions a wall can be in.
     let mut mask: u8 = 0;
-    if is_revealed_and_wall(map, x, y - 1) { mask += 1; }
-    if is_revealed_and_wall(map, x, y + 1) { mask += 2; }
-    if is_revealed_and_wall(map, x - 1, y) { mask += 4; }
-    if is_revealed_and_wall(map, x + 1, y) { mask += 8; }
+    if is_revealed_and_wall(map, x, y - 1) {
+        mask += 1;
+    }
+    if is_revealed_and_wall(map, x, y + 1) {
+        mask += 2;
+    }
+    if is_revealed_and_wall(map, x - 1, y) {
+        mask += 4;
+    }
+    if is_revealed_and_wall(map, x + 1, y) {
+        mask += 8;
+    }
 
     match mask {
-        0 => 9,     // Pillar (can't see neighbors)
-        1 => 186,   // Wall to the north
-        2 => 186,   // Wall to the south
-        3 => 186,   // Wall to the north and south
-        4 => 205,   // Wall to the west
-        5 => 188,   // Wall to the north and west
-        6 => 187,   // Wall to the south and west
-        7 => 185,   // Wall to the north, south, and west
-        8 => 205,   // Wall to the east
-        9 => 200,   // Wall to the north and east
-        10 => 201,  // Wall to the south and east
-        11 => 204,  // Wall to the north, south, and east
-        12 => 205,  // Wall to the east and west
-        13 => 202,  // Wall to the east, west, and south
-        14 => 203,  // Wall to the east, west, and north
-        15 => 206,  // Wall on all sides
-        _ => 35,    // Just in case we missed one
+        0 => 9,    // Pillar (can't see neighbors)
+        1 => 186,  // Wall to the north
+        2 => 186,  // Wall to the south
+        3 => 186,  // Wall to the north and south
+        4 => 205,  // Wall to the west
+        5 => 188,  // Wall to the north and west
+        6 => 187,  // Wall to the south and west
+        7 => 185,  // Wall to the north, south, and west
+        8 => 205,  // Wall to the east
+        9 => 200,  // Wall to the north and east
+        10 => 201, // Wall to the south and east
+        11 => 204, // Wall to the north, south, and east
+        12 => 205, // Wall to the east and west
+        13 => 202, // Wall to the east, west, and south
+        14 => 203, // Wall to the east, west, and north
+        15 => 206, // Wall on all sides
+        _ => 35,   // Just in case we missed one
     }
 }
 

@@ -1,6 +1,6 @@
+use super::{components::*, gamelog::GameLog, particle_system::ParticleBuilder, Map, RunState};
 use rltk::{BLACK, GREEN, MAGENTA, ORANGE, RED, RGB};
 use specs::prelude::*;
-use super::{components::*, gamelog::GameLog, Map, particle_system::ParticleBuilder, RunState};
 
 pub struct ItemCollectionSystem {}
 
@@ -12,7 +12,7 @@ impl<'a> System<'a> for ItemCollectionSystem {
         WriteStorage<'a, WantsToPickupItem>,
         WriteStorage<'a, Position>,
         ReadStorage<'a, Name>,
-        WriteStorage<'a, InBackpack>
+        WriteStorage<'a, InBackpack>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
@@ -21,14 +21,22 @@ impl<'a> System<'a> for ItemCollectionSystem {
         for pickup in wants_pickup.join() {
             positions.remove(pickup.item);
             backpack
-                .insert(pickup.item, InBackpack { owner: pickup.collected_by })
+                .insert(
+                    pickup.item,
+                    InBackpack {
+                        owner: pickup.collected_by,
+                    },
+                )
                 .expect("Unable to insert into backpack");
 
             if pickup.collected_by == *player {
-                log.entries.push(format!("You pick up the {}.",
-                                            names.get(pickup.item).unwrap().name));
+                log.entries.push(format!(
+                    "You pick up the {}.",
+                    names.get(pickup.item).unwrap().name
+                ));
             }
-        } wants_pickup.clear();
+        }
+        wants_pickup.clear();
     }
 }
 
@@ -106,7 +114,7 @@ impl<'a> System<'a> for ItemUseSystem {
                             for mob in map.tile_content[idx].iter() {
                                 targets.push(*mob);
                             }
-                        },
+                        }
                         // In AoE--determine what's in radius of the item's effect.
                         Some(area_effect) => {
                             // Plot a viewshed from the centroid (target) of appropriate
@@ -114,8 +122,12 @@ impl<'a> System<'a> for ItemUseSystem {
                             let blast_tiles =
                                 rltk::field_of_view(target, area_effect.radius, &*map)
                                     .into_iter()
-                                    .filter(|p| p.x > 0 && p.x < map.width-1
-                                        && p.y > 0 && p.y < map.height-1)
+                                    .filter(|p| {
+                                        p.x > 0
+                                            && p.x < map.width - 1
+                                            && p.y > 0
+                                            && p.y < map.height - 1
+                                    })
                                     .collect::<Vec<_>>();
 
                             // Look at each tile in the area of effect; content
@@ -126,8 +138,12 @@ impl<'a> System<'a> for ItemUseSystem {
                                     targets.push(*mob);
                                 }
                                 particle_builder.request(
-                                    tile_idx.x, tile_idx.y, RGB::named(ORANGE),
-                                    RGB::named(BLACK), rltk::to_cp437('░'), 200.0
+                                    tile_idx.x,
+                                    tile_idx.y,
+                                    RGB::named(ORANGE),
+                                    RGB::named(BLACK),
+                                    rltk::to_cp437('░'),
+                                    200.0,
                                 );
                             }
                         }
@@ -138,7 +154,7 @@ impl<'a> System<'a> for ItemUseSystem {
             // If equippable, equip it.
             match equippable.get(useitem.item) {
                 // Not equippable, continue.
-                None => {},
+                None => {}
                 // Equippable--get slot and first target (invoker)
                 Some(can_equip) => {
                     let target_slot = can_equip.slot;
@@ -146,9 +162,11 @@ impl<'a> System<'a> for ItemUseSystem {
 
                     // Get vec of items to unequip before the `useitem` can be equipped.
                     let mut to_unequip: Vec<Entity> = Vec::new();
-                    for (item_ent, already_equipped, name) in (&entities, &equipped, &names).join() {
+                    for (item_ent, already_equipped, name) in (&entities, &equipped, &names).join()
+                    {
                         // Check to see if the needed equipment slot is already filled.
-                        if already_equipped.owner == target && already_equipped.slot == target_slot {
+                        if already_equipped.owner == target && already_equipped.slot == target_slot
+                        {
                             // If so, make a note to take it off (by putting it in our vec).
                             to_unequip.push(item_ent);
                             // If it's the player, let them know they've unequipped an item.
@@ -166,17 +184,23 @@ impl<'a> System<'a> for ItemUseSystem {
                             .expect("Unable to insert backpack entry");
                     });
                     // Equip the desired item.
-                    equipped.insert(
-                        useitem.item,
-                        Equipped { owner: target, slot: target_slot }
-                    ).expect("Unable to insert equipped component");
+                    equipped
+                        .insert(
+                            useitem.item,
+                            Equipped {
+                                owner: target,
+                                slot: target_slot,
+                            },
+                        )
+                        .expect("Unable to insert equipped component");
                     // Remove said item from the player's backpack (since it's now equipped).
                     backpack.remove(useitem.item);
                     // If it's the player, let them know that they've equipped the item.
                     if target == *player_ent {
-                        log.entries.push(
-                            format!("You equip the {}.", names.get(useitem.item).unwrap().name)
-                        );
+                        log.entries.push(format!(
+                            "You equip the {}.",
+                            names.get(useitem.item).unwrap().name
+                        ));
                     }
                 }
             }
@@ -184,7 +208,7 @@ impl<'a> System<'a> for ItemUseSystem {
             // If the item is food, eat it.
             match provides_food.get(useitem.item) {
                 // None--item isn't food.
-                None => {},
+                None => {}
                 Some(_) => {
                     // Must consume to get benefit--no regurgitation necessary.
                     item_used = true;
@@ -193,9 +217,10 @@ impl<'a> System<'a> for ItemUseSystem {
                         hc.state = HungerState::WellFed;
                         hc.duration = 20;
                         // Let the user know they ate something.
-                        log.entries.push(
-                            format!("You eat the {}.", names.get(useitem.item).unwrap().name)
-                        );
+                        log.entries.push(format!(
+                            "You eat the {}.",
+                            names.get(useitem.item).unwrap().name
+                        ));
                     }
                 }
             }
@@ -213,16 +238,22 @@ impl<'a> System<'a> for ItemUseSystem {
                             // Heals the target by the items healing amount, up to their max hp.
                             stats.hp = i32::min(stats.max_hp, stats.hp + healer.heal_amount);
                             if ent == *player_ent {
-                                log.entries.push(format!("You drink the {}, healing {} hp.",
+                                log.entries.push(format!(
+                                    "You drink the {}, healing {} hp.",
                                     names.get(useitem.item).unwrap().name,
-                                    healer.heal_amount));
+                                    healer.heal_amount
+                                ));
                             }
                             item_used = true;
                             // Flash a green heart particle to indicate healing.
                             if let Some(pos) = positions.get(*target) {
                                 particle_builder.request(
-                                    pos.x, pos.y, RGB::named(GREEN), RGB::named(BLACK),
-                                    rltk::to_cp437('♥'), 200.0
+                                    pos.x,
+                                    pos.y,
+                                    RGB::named(GREEN),
+                                    RGB::named(BLACK),
+                                    rltk::to_cp437('♥'),
+                                    200.0,
                                 );
                             }
                         }
@@ -243,18 +274,23 @@ impl<'a> System<'a> for ItemUseSystem {
                         if ent == *player_ent {
                             let mob_name = names.get(*mob).unwrap();
                             let item_name = names.get(useitem.item).unwrap();
-                            log.entries.push(
-                                format!("You use {} on {}, inflicting {} damage.",
-                                        item_name.name, mob_name.name, damage.damage)
-                            );
+                            log.entries.push(format!(
+                                "You use {} on {}, inflicting {} damage.",
+                                item_name.name, mob_name.name, damage.damage
+                            ));
                             // Flash red `‼` on damaged mob.
                             if let Some(pos) = positions.get(*mob) {
                                 particle_builder.request(
-                                    pos.x, pos.y, RGB::named(RED), RGB::named(BLACK),
-                                    rltk::to_cp437('‼'), 200.0
+                                    pos.x,
+                                    pos.y,
+                                    RGB::named(RED),
+                                    RGB::named(BLACK),
+                                    rltk::to_cp437('‼'),
+                                    200.0,
                                 );
                             }
-                        } item_used = true;
+                        }
+                        item_used = true;
                     }
                 }
             }
@@ -265,7 +301,7 @@ impl<'a> System<'a> for ItemUseSystem {
             {
                 match confused.get(useitem.item) {
                     // If None, item doesn't apply confusion.
-                    None => {},
+                    None => {}
                     Some(confusion) => {
                         item_used = false;
                         // Mark mobs to confuse by placing them into the vec.
@@ -275,15 +311,19 @@ impl<'a> System<'a> for ItemUseSystem {
                             if ent == *player_ent {
                                 let mob_name = names.get(*mob).unwrap();
                                 let item_name = names.get(useitem.item).unwrap();
-                                log.entries.push(
-                                    format!("You use {} on {}, confusing them.",
-                                            item_name.name, mob_name.name)
-                                );
+                                log.entries.push(format!(
+                                    "You use {} on {}, confusing them.",
+                                    item_name.name, mob_name.name
+                                ));
                                 // Flash magenta `?` on the confused mob.
                                 if let Some(pos) = positions.get(*mob) {
                                     particle_builder.request(
-                                        pos.x, pos.y, RGB::named(MAGENTA), RGB::named(BLACK),
-                                        rltk::to_cp437('?'), 200.0
+                                        pos.x,
+                                        pos.y,
+                                        RGB::named(MAGENTA),
+                                        RGB::named(BLACK),
+                                        rltk::to_cp437('?'),
+                                        200.0,
                                     );
                                 }
                             }
@@ -299,7 +339,7 @@ impl<'a> System<'a> for ItemUseSystem {
             }
 
             match magic_mapper.get(useitem.item) {
-                None => {},
+                None => {}
                 Some(_) => {
                     item_used = true;
                     log.entries.push("The map is revealed to you!".to_string());
@@ -333,11 +373,12 @@ impl<'a> System<'a> for ItemDropSystem {
         WriteStorage<'a, WantsToDropItem>,
         ReadStorage<'a, Name>,
         WriteStorage<'a, Position>,
-        WriteStorage<'a, InBackpack>
+        WriteStorage<'a, InBackpack>,
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (player_ent, mut log, entities, mut wants_drop, names, mut positions, mut backpack) = data;
+        let (player_ent, mut log, entities, mut wants_drop, names, mut positions, mut backpack) =
+            data;
 
         for (ent, to_drop) in (&entities, &wants_drop).join() {
             let mut dropper_pos: Position = Position { x: 0, y: 0 };
@@ -347,13 +388,21 @@ impl<'a> System<'a> for ItemDropSystem {
                 dropper_pos.y = dropped_pos.y;
             }
             positions
-                .insert(to_drop.item, Position { x: dropper_pos.x, y: dropper_pos.y })
+                .insert(
+                    to_drop.item,
+                    Position {
+                        x: dropper_pos.x,
+                        y: dropper_pos.y,
+                    },
+                )
                 .expect("Unable to insert position");
             backpack.remove(to_drop.item);
 
             if ent == *player_ent {
-                log.entries.push(format!("You drop the {}.",
-                    names.get(to_drop.item).unwrap().name));
+                log.entries.push(format!(
+                    "You drop the {}.",
+                    names.get(to_drop.item).unwrap().name
+                ));
             }
         }
 
@@ -373,12 +422,7 @@ impl<'a> System<'a> for ItemRemoveSystem {
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (
-            entities,
-            mut wants_remove,
-            mut equipped,
-            mut backpack
-        ) = data;
+        let (entities, mut wants_remove, mut equipped, mut backpack) = data;
 
         for (ent, to_remove) in (&entities, &wants_remove).join() {
             equipped.remove(to_remove.item);

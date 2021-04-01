@@ -1,6 +1,6 @@
-use specs::prelude::*;
 use super::{gamelog::GameLog, Hidden, Map, Name, Player, Position, Viewshed};
 use rltk::{field_of_view, Point};
+use specs::prelude::*;
 
 pub struct VisibilitySystem {}
 
@@ -19,17 +19,8 @@ impl<'a> System<'a> for VisibilitySystem {
     );
 
     fn run(&mut self, data: Self::SystemData) {
-        let (
-            mut map,
-            entities,
-            mut viewshed,
-            pos,
-            player,
-            mut hidden,
-            mut rng,
-            mut log,
-            names,
-        ) = data;
+        let (mut map, entities, mut viewshed, pos, player, mut hidden, mut rng, mut log, names) =
+            data;
 
         for (ent, viewshed, pos) in (&entities, &mut viewshed, &pos).join() {
             // If player has been moved, update the viewshed.
@@ -39,21 +30,20 @@ impl<'a> System<'a> for VisibilitySystem {
                 viewshed.visible_tiles.clear();
                 // Get visible tiles for the current entity at position `pos` using
                 // its visibility range from its viewshed.
-                viewshed.visible_tiles = field_of_view(
-                    Point::new(pos.x, pos.y),
-                    viewshed.range,
-                    &*map
-                );
+                viewshed.visible_tiles =
+                    field_of_view(Point::new(pos.x, pos.y), viewshed.range, &*map);
                 // Deletes entries that don't meet the specified criteria; that is,
                 // confines the visible tiles to only those within the map bounds.
-                viewshed.visible_tiles.retain(
-                    |p| p.x >= 0 && p.x < map.width && p.y >= 0 && p.y < map.height
-                );
+                viewshed
+                    .visible_tiles
+                    .retain(|p| p.x >= 0 && p.x < map.width && p.y >= 0 && p.y < map.height);
 
                 // If this is the player, reveal the tiles they can see.
                 if let Some(_) = player.get(ent) {
                     // Set all to non-visible to start.
-                    for t in map.visible_tiles.iter_mut() { *t = false };
+                    for t in map.visible_tiles.iter_mut() {
+                        *t = false
+                    }
                     // Update tiles in our currently visible range.
                     for vis in viewshed.visible_tiles.iter() {
                         let idx = map.xy_idx(vis.x, vis.y);

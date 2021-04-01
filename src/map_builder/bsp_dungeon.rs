@@ -1,7 +1,7 @@
 use rltk::RandomNumberGenerator;
 
-use crate::{Map, MapBuilder, Position, SHOW_MAPGEN_VISUALIZER, spawner, Rect, TileType};
 use super::common::apply_room_to_map;
+use crate::{spawner, Map, MapBuilder, Position, Rect, TileType, SHOW_MAPGEN_VISUALIZER};
 
 pub struct BspDungeonBuilder {
     map: Map,
@@ -39,9 +39,7 @@ impl MapBuilder for BspDungeonBuilder {
     fn take_snapshot(&mut self) {
         if SHOW_MAPGEN_VISUALIZER {
             let mut snapshot = self.map.clone();
-            snapshot.revealed_tiles
-                    .iter_mut()
-                    .for_each(|v| *v = true);
+            snapshot.revealed_tiles.iter_mut().for_each(|v| *v = true);
             self.history.push(snapshot);
         }
     }
@@ -65,7 +63,8 @@ impl BspDungeonBuilder {
         // Clear any previously stored rectangles.
         self.rects.clear();
         // Add the entire map as the "first room" (with some added padding).
-        self.rects.push(Rect::new(2, 2, self.map.width-5, self.map.height-5));
+        self.rects
+            .push(Rect::new(2, 2, self.map.width - 5, self.map.height - 5));
         // Divide the first room into four quadrants.
         self.add_subrects(self.rects[0]);
 
@@ -115,16 +114,33 @@ impl BspDungeonBuilder {
         let half_height = i32::max(rect.width() / 2, 1);
 
         // Add all four quadrants to our rect vec.
-        self.rects.push(Rect::new(rect.x1, rect.y1, half_width, half_height));
-        self.rects.push(Rect::new(rect.x1, rect.y1 + half_height, half_width, half_height));
-        self.rects.push(Rect::new(rect.x1 + half_width, rect.y1, half_width, half_height));
-        self.rects.push(Rect::new(rect.x1 + half_width, rect.y1 + half_height,
-            half_width, half_height));
+        self.rects
+            .push(Rect::new(rect.x1, rect.y1, half_width, half_height));
+        self.rects.push(Rect::new(
+            rect.x1,
+            rect.y1 + half_height,
+            half_width,
+            half_height,
+        ));
+        self.rects.push(Rect::new(
+            rect.x1 + half_width,
+            rect.y1,
+            half_width,
+            half_height,
+        ));
+        self.rects.push(Rect::new(
+            rect.x1 + half_width,
+            rect.y1 + half_height,
+            half_width,
+            half_height,
+        ));
     }
 
     /// Get a random rectangle from the generated rectangles so far.
     fn get_random_rect(&mut self, rng: &mut RandomNumberGenerator) -> Rect {
-        if self.rects.len() == 1 { return self.rects[0] }
+        if self.rects.len() == 1 {
+            return self.rects[0];
+        }
         let idx: usize = (rng.roll_dice(1, self.rects.len() as i32) - 1) as usize;
         self.rects[idx]
     }
@@ -153,8 +169,8 @@ impl BspDungeonBuilder {
         expanded.y2 += 2;
 
         // Go through all coordinates in the rect.
-        for y in expanded.y1 ..= expanded.y2 {
-            for x in expanded.x1 ..= expanded.x2 {
+        for y in expanded.y1..=expanded.y2 {
+            for x in expanded.x1..=expanded.x2 {
                 // Can't build if it's outside the map boundaries!
                 if x > self.map.width - 2 || x < 1 || y > self.map.height - 2 || y < 1 {
                     return false;

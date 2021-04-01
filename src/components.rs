@@ -1,11 +1,11 @@
+use rltk::RGB;
 use serde::{Deserialize, Serialize};
 use specs::{
-    prelude::*,
-    saveload::{Marker, ConvertSaveload},
     error::NoError,
+    prelude::*,
+    saveload::{ConvertSaveload, Marker},
 };
 use specs_derive::*;
-use rltk::{RGB};
 
 /// Component detailing the 2D position of an entity.
 #[derive(Component, ConvertSaveload, Clone)]
@@ -82,7 +82,7 @@ pub struct CombatStats {
 /// Flag: entity is able to act at range.
 #[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct Ranged {
-    pub range: i32
+    pub range: i32,
 }
 
 /// Entity with this can pass along confusion.
@@ -94,13 +94,13 @@ pub struct Confusion {
 /// Flag: entity affects others within radius of its location.
 #[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct AreaOfEffect {
-    pub radius: i32
+    pub radius: i32,
 }
 
 /// Flag: entity is able to inflict damage on other entities.
 #[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct InflictsDamage {
-    pub damage: i32
+    pub damage: i32,
 }
 
 /// Struct used for handling and applying damage to entities.
@@ -114,7 +114,9 @@ impl SufferDamage {
         if let Some(suffering) = store.get_mut(victim) {
             suffering.amount.push(amount);
         } else {
-            let dmg = SufferDamage { amount: vec![amount] };
+            let dmg = SufferDamage {
+                amount: vec![amount],
+            };
             store.insert(victim, dmg).expect("Unable to insert damage");
         }
     }
@@ -123,20 +125,20 @@ impl SufferDamage {
 /// Intent: entity wants to engage in melee combat against `target`.
 #[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct WantsToMelee {
-    pub target: Entity
+    pub target: Entity,
 }
 
 /// Intent. Taken on when an entity tries to pick up an item.
 #[derive(Component, Debug, ConvertSaveload)]
 pub struct WantsToPickupItem {
     pub collected_by: Entity,
-    pub item: Entity
+    pub item: Entity,
 }
 
 /// Intent. Taken on when an entity tries to drop an item.
 #[derive(Component, Debug, ConvertSaveload)]
 pub struct WantsToDropItem {
-    pub item: Entity
+    pub item: Entity,
 }
 
 #[derive(Component, Debug, ConvertSaveload, Clone)]
@@ -148,17 +150,20 @@ pub struct WantsToRemoveItem {
 #[derive(Component, Debug, ConvertSaveload)]
 pub struct WantsToUseItem {
     pub item: Entity,
-    pub target: Option<rltk::Point>
+    pub target: Option<rltk::Point>,
 }
 
 /// Flag: entity with this flag is in the possession (backpack) of `owner`.
 #[derive(Component, Debug, ConvertSaveload)]
 pub struct InBackpack {
-    pub owner: Entity
+    pub owner: Entity,
 }
 
 #[derive(PartialEq, Copy, Clone, Serialize, Deserialize)]
-pub enum EquipmentSlot { Melee, Shield }
+pub enum EquipmentSlot {
+    Melee,
+    Shield,
+}
 
 #[derive(Component, Serialize, Deserialize, Clone)]
 pub struct Equippable {
@@ -168,7 +173,7 @@ pub struct Equippable {
 #[derive(Component, ConvertSaveload, Clone)]
 pub struct Equipped {
     pub owner: Entity,
-    pub slot: EquipmentSlot
+    pub slot: EquipmentSlot,
 }
 
 /// Flag: an item.
@@ -187,7 +192,7 @@ pub struct ProvidesFood {}
 /// Flag: an item that provides healing.
 #[derive(Component, Debug, ConvertSaveload, Clone)]
 pub struct ProvidesHealing {
-    pub heal_amount: i32
+    pub heal_amount: i32,
 }
 
 #[derive(Component, ConvertSaveload, Clone)]
@@ -206,7 +211,12 @@ pub struct ParticleLifetime {
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq)]
-pub enum HungerState { WellFed, Normal, Hungry, Starving }
+pub enum HungerState {
+    WellFed,
+    Normal,
+    Hungry,
+    Starving,
+}
 
 #[derive(Component, Serialize, Deserialize, Clone)]
 pub struct HungerClock {
@@ -228,8 +238,6 @@ pub struct EntityMoved {}
 
 #[derive(Component, Debug, Serialize, Deserialize, Clone)]
 pub struct SingleActivation {}
-
-
 
 #[derive(Component, Debug)]
 pub struct SerializeMe;

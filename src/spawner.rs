@@ -1,5 +1,8 @@
-use rltk::{RGB, RandomNumberGenerator};
-use specs::{prelude::*, saveload::{MarkedBuilder, SimpleMarker}};
+use rltk::{RandomNumberGenerator, RGB};
+use specs::{
+    prelude::*,
+    saveload::{MarkedBuilder, SimpleMarker},
+};
 use std::collections::HashMap;
 
 use crate::{Map, TileType};
@@ -10,9 +13,11 @@ const MAX_MONSTERS: i32 = 4;
 
 /// Spawns the player and returns its entity.
 pub fn player(ecs: &mut World, player_x: i32, player_y: i32) -> Entity {
-    ecs
-        .create_entity()
-        .with(Position { x: player_x, y: player_y })
+    ecs.create_entity()
+        .with(Position {
+            x: player_x,
+            y: player_y,
+        })
         .with(Renderable {
             glyph: rltk::to_cp437('@'),
             fg: RGB::named(rltk::YELLOW),
@@ -20,15 +25,24 @@ pub fn player(ecs: &mut World, player_x: i32, player_y: i32) -> Entity {
             render_order: 0,
         })
         .with(Player {})
-        .with(Viewshed { visible_tiles: Vec::new(), range: 8, dirty: true })
-        .with(Name { name: "Player".to_string() })
+        .with(Viewshed {
+            visible_tiles: Vec::new(),
+            range: 8,
+            dirty: true,
+        })
+        .with(Name {
+            name: "Player".to_string(),
+        })
         .with(CombatStats {
             max_hp: 30,
             hp: 30,
             defense: 2,
             power: 5,
         })
-        .with(HungerClock { state: HungerState::WellFed, duration: 20 })
+        .with(HungerClock {
+            state: HungerState::WellFed,
+            duration: 20,
+        })
         .marked::<SimpleMarker<SerializeMe>>()
         .build()
 }
@@ -38,8 +52,8 @@ pub fn spawn_room(ecs: &mut World, room: &Rect, map_depth: i32) {
     let mut possible_targets: Vec<usize> = Vec::new();
     {
         let map = ecs.fetch::<Map>();
-        for y in room.y1 + 1 .. room.y2 {
-            for x in room.x1 + 1 .. room.x2 {
+        for y in room.y1 + 1..room.y2 {
+            for x in room.x1 + 1..room.x2 {
                 let idx = map.xy_idx(x, y);
                 if map.tiles[idx] == TileType::Floor {
                     possible_targets.push(idx);
@@ -62,11 +76,15 @@ pub fn spawn_region(ecs: &mut World, area: &[usize], map_depth: i32) {
         // Get the rng we registered with the game to use for spawning.
         let mut rng = ecs.write_resource::<RandomNumberGenerator>();
         // Cap the number of entities to spawn, so we don't spawn more than we have room for.
-        let num_spawns = i32::min(areas.len() as i32, rng.roll_dice(1, MAX_MONSTERS + 3)
-            + (map_depth - 1) - 3);
+        let num_spawns = i32::min(
+            areas.len() as i32,
+            rng.roll_dice(1, MAX_MONSTERS + 3) + (map_depth - 1) - 3,
+        );
 
         // If we're not spawning anything, might as well return.
-        if num_spawns == 0 { return; }
+        if num_spawns == 0 {
+            return;
+        }
         for _ in 0..num_spawns {
             // Otherwise, get an index from areas.
             let array_index = if areas.len() == 1 {
@@ -135,11 +153,8 @@ fn goblin(ecs: &mut World, x: i32, y: i32) {
 }
 
 /// Spawns a monster at `(x,y)` with a given glyph and name.
-fn monster<S: ToString>(
-    ecs: &mut World, x: i32, y: i32, glyph: rltk::FontCharType, name: S
-) {
-    ecs
-        .create_entity()
+fn monster<S: ToString>(ecs: &mut World, x: i32, y: i32, glyph: rltk::FontCharType, name: S) {
+    ecs.create_entity()
         .with(Position { x, y })
         .with(Renderable {
             glyph: glyph,
@@ -147,9 +162,15 @@ fn monster<S: ToString>(
             bg: RGB::named(rltk::BLACK),
             render_order: 1,
         })
-        .with(Viewshed { visible_tiles: Vec::new(), range: 8, dirty: true })
+        .with(Viewshed {
+            visible_tiles: Vec::new(),
+            range: 8,
+            dirty: true,
+        })
         .with(Monster {})
-        .with(Name { name: name.to_string() })
+        .with(Name {
+            name: name.to_string(),
+        })
         .with(BlocksTile {})
         .with(CombatStats {
             max_hp: 16,
@@ -162,8 +183,7 @@ fn monster<S: ToString>(
 }
 
 fn rations(ecs: &mut World, x: i32, y: i32) {
-    ecs
-        .create_entity()
+    ecs.create_entity()
         .with(Position { x, y })
         .with(Renderable {
             glyph: rltk::to_cp437('%'),
@@ -171,7 +191,9 @@ fn rations(ecs: &mut World, x: i32, y: i32) {
             bg: RGB::named(rltk::BLACK),
             render_order: 2,
         })
-        .with(Name { name: "Rations".to_string() })
+        .with(Name {
+            name: "Rations".to_string(),
+        })
         .with(Item {})
         .with(ProvidesFood {})
         .with(Consumable {})
@@ -181,8 +203,7 @@ fn rations(ecs: &mut World, x: i32, y: i32) {
 
 /// Spawns a health potion at `(x,y)`.
 fn potion_health(ecs: &mut World, x: i32, y: i32) {
-    ecs
-        .create_entity()
+    ecs.create_entity()
         .with(Position { x, y })
         .with(Renderable {
             glyph: rltk::to_cp437(';'),
@@ -190,7 +211,9 @@ fn potion_health(ecs: &mut World, x: i32, y: i32) {
             bg: RGB::named(rltk::BLACK),
             render_order: 2,
         })
-        .with(Name { name: "Health Potion".to_string() })
+        .with(Name {
+            name: "Health Potion".to_string(),
+        })
         .with(Item {})
         .with(Consumable {})
         .with(ProvidesHealing { heal_amount: 8 })
@@ -202,16 +225,17 @@ fn potion_health(ecs: &mut World, x: i32, y: i32) {
 ///
 /// Magic missile scrolls target a single entity, and are consumed on use.
 fn scroll_magic_missile(ecs: &mut World, x: i32, y: i32) {
-    ecs
-        .create_entity()
+    ecs.create_entity()
         .with(Position { x, y })
         .with(Renderable {
             glyph: rltk::to_cp437(')'),
             fg: RGB::named(rltk::CYAN),
             bg: RGB::named(rltk::BLACK),
-            render_order: 2
+            render_order: 2,
         })
-        .with(Name { name: "Magic Missile Scroll".to_string() })
+        .with(Name {
+            name: "Magic Missile Scroll".to_string(),
+        })
         .with(Item {})
         .with(Consumable {})
         .with(Ranged { range: 6 })
@@ -225,16 +249,17 @@ fn scroll_magic_missile(ecs: &mut World, x: i32, y: i32) {
 /// Fireball is an area-of-effect ability, hitting all entities within range
 /// of the targeted location. Like other scrolls, these are consumed on use.
 fn scroll_fireball(ecs: &mut World, x: i32, y: i32) {
-    ecs
-        .create_entity()
+    ecs.create_entity()
         .with(Position { x, y })
         .with(Renderable {
             glyph: rltk::to_cp437(')'),
             fg: RGB::named(rltk::ORANGE),
             bg: RGB::named(rltk::BLACK),
-            render_order: 2
+            render_order: 2,
         })
-        .with(Name { name: "Fireball Scroll".to_string() })
+        .with(Name {
+            name: "Fireball Scroll".to_string(),
+        })
         .with(Item {})
         .with(Consumable {})
         .with(Ranged { range: 6 })
@@ -249,8 +274,7 @@ fn scroll_fireball(ecs: &mut World, x: i32, y: i32) {
 /// Confusion targets a single entity at range, and confuses them for a number
 /// of turns. During this time, the entity is unable to perform any actions.
 fn scroll_confusion(ecs: &mut World, x: i32, y: i32) {
-    ecs
-        .create_entity()
+    ecs.create_entity()
         .with(Position { x, y })
         .with(Renderable {
             glyph: rltk::to_cp437(')'),
@@ -258,7 +282,9 @@ fn scroll_confusion(ecs: &mut World, x: i32, y: i32) {
             bg: RGB::named(rltk::BLACK),
             render_order: 2,
         })
-        .with(Name { name: "Confusion Scroll".to_string() })
+        .with(Name {
+            name: "Confusion Scroll".to_string(),
+        })
         .with(Item {})
         .with(Consumable {})
         .with(Ranged { range: 6 })
@@ -268,8 +294,7 @@ fn scroll_confusion(ecs: &mut World, x: i32, y: i32) {
 }
 
 fn scroll_magic_mapping(ecs: &mut World, x: i32, y: i32) {
-    ecs
-        .create_entity()
+    ecs.create_entity()
         .with(Position { x, y })
         .with(Renderable {
             glyph: rltk::to_cp437('◙'),
@@ -277,7 +302,9 @@ fn scroll_magic_mapping(ecs: &mut World, x: i32, y: i32) {
             bg: RGB::named(rltk::BLACK),
             render_order: 2,
         })
-        .with(Name { name: "Scroll of Magic Mapping".to_string() })
+        .with(Name {
+            name: "Scroll of Magic Mapping".to_string(),
+        })
         .with(Item {})
         .with(MagicMapper {})
         .with(Consumable {})
@@ -286,8 +313,7 @@ fn scroll_magic_mapping(ecs: &mut World, x: i32, y: i32) {
 }
 
 fn dagger(ecs: &mut World, x: i32, y: i32) {
-    ecs
-        .create_entity()
+    ecs.create_entity()
         .with(Position { x, y })
         .with(Renderable {
             glyph: rltk::to_cp437('/'),
@@ -295,17 +321,20 @@ fn dagger(ecs: &mut World, x: i32, y: i32) {
             bg: RGB::named(rltk::BLACK),
             render_order: 2,
         })
-        .with(Name { name: "Dagger".to_string() })
+        .with(Name {
+            name: "Dagger".to_string(),
+        })
         .with(Item {})
-        .with(Equippable { slot: EquipmentSlot::Melee })
+        .with(Equippable {
+            slot: EquipmentSlot::Melee,
+        })
         .with(MeleePowerBonus { power: 2 })
         .marked::<SimpleMarker<SerializeMe>>()
         .build();
 }
 
 fn longsword(ecs: &mut World, x: i32, y: i32) {
-    ecs
-        .create_entity()
+    ecs.create_entity()
         .with(Position { x, y })
         .with(Renderable {
             glyph: rltk::to_cp437('/'),
@@ -313,17 +342,20 @@ fn longsword(ecs: &mut World, x: i32, y: i32) {
             bg: RGB::named(rltk::BLACK),
             render_order: 2,
         })
-        .with(Name { name: "Longsword".to_string() })
+        .with(Name {
+            name: "Longsword".to_string(),
+        })
         .with(Item {})
-        .with(Equippable { slot: EquipmentSlot::Melee })
+        .with(Equippable {
+            slot: EquipmentSlot::Melee,
+        })
         .with(MeleePowerBonus { power: 4 })
         .marked::<SimpleMarker<SerializeMe>>()
         .build();
 }
 
 fn shield(ecs: &mut World, x: i32, y: i32) {
-    ecs
-        .create_entity()
+    ecs.create_entity()
         .with(Position { x, y })
         .with(Renderable {
             glyph: rltk::to_cp437('('),
@@ -331,17 +363,20 @@ fn shield(ecs: &mut World, x: i32, y: i32) {
             bg: RGB::named(rltk::BLACK),
             render_order: 2,
         })
-        .with(Name { name: "Shield".to_string() })
+        .with(Name {
+            name: "Shield".to_string(),
+        })
         .with(Item {})
-        .with(Equippable { slot: EquipmentSlot::Shield })
+        .with(Equippable {
+            slot: EquipmentSlot::Shield,
+        })
         .with(DefenseBonus { defense: 1 })
         .marked::<SimpleMarker<SerializeMe>>()
         .build();
 }
 
 fn tower_shield(ecs: &mut World, x: i32, y: i32) {
-    ecs
-        .create_entity()
+    ecs.create_entity()
         .with(Position { x, y })
         .with(Renderable {
             glyph: rltk::to_cp437('('),
@@ -349,17 +384,20 @@ fn tower_shield(ecs: &mut World, x: i32, y: i32) {
             bg: RGB::named(rltk::BLACK),
             render_order: 2,
         })
-        .with(Name { name: "Tower Shield".to_string() })
+        .with(Name {
+            name: "Tower Shield".to_string(),
+        })
         .with(Item {})
-        .with(Equippable { slot: EquipmentSlot::Shield })
+        .with(Equippable {
+            slot: EquipmentSlot::Shield,
+        })
         .with(DefenseBonus { defense: 3 })
         .marked::<SimpleMarker<SerializeMe>>()
         .build();
 }
 
 fn bear_trap(ecs: &mut World, x: i32, y: i32) {
-    ecs
-        .create_entity()
+    ecs.create_entity()
         .with(Position { x, y })
         .with(Renderable {
             glyph: rltk::to_cp437('^'),
@@ -367,7 +405,9 @@ fn bear_trap(ecs: &mut World, x: i32, y: i32) {
             bg: RGB::named(rltk::BLACK),
             render_order: 2,
         })
-        .with(Name { name: "Bear Trap".to_string() })
+        .with(Name {
+            name: "Bear Trap".to_string(),
+        })
         .with(Hidden {})
         .with(EntryTrigger {})
         .with(SingleActivation {})

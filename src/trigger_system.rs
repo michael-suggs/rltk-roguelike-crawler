@@ -1,8 +1,10 @@
-use specs::prelude::*;
 use crate::{InflictsDamage, SingleActivation, SufferDamage};
+use specs::prelude::*;
 
-use super::{EntityMoved, EntryTrigger, Hidden, Map, Name, Position,
-    particle_system::ParticleBuilder, gamelog::GameLog};
+use super::{
+    gamelog::GameLog, particle_system::ParticleBuilder, EntityMoved, EntryTrigger, Hidden, Map,
+    Name, Position,
+};
 
 pub struct TriggerSystem {}
 
@@ -45,38 +47,37 @@ impl<'a> System<'a> for TriggerSystem {
             map.tile_content[idx]
                 .iter()
                 .filter(|ent_id| ent != **ent_id)
-                .for_each(|ent_id| {
-                    match entry_trigger.get(*ent_id) {
-                        None => {},
-                        Some(_) => {
-                            if let Some(name) = names.get(*ent_id) {
-                                log.entries.push(format!("{} triggers!", &name.name));
-                            }
+                .for_each(|ent_id| match entry_trigger.get(*ent_id) {
+                    None => {}
+                    Some(_) => {
+                        if let Some(name) = names.get(*ent_id) {
+                            log.entries.push(format!("{} triggers!", &name.name));
+                        }
 
-                            hidden.remove(*ent_id);
+                        hidden.remove(*ent_id);
 
-                            if let Some(damage) = inflicts_damage.get(*ent_id) {
-                                particle_builder.request(pos.x, pos.y,
-                                    rltk::RGB::named(rltk::ORANGE),
-                                    rltk::RGB::named(rltk::BLACK),
-                                    rltk::to_cp437('‼'), 200.0
-                                );
-                                SufferDamage::new_damage(&mut suffering, ent, damage.damage);
-                            }
+                        if let Some(damage) = inflicts_damage.get(*ent_id) {
+                            particle_builder.request(
+                                pos.x,
+                                pos.y,
+                                rltk::RGB::named(rltk::ORANGE),
+                                rltk::RGB::named(rltk::BLACK),
+                                rltk::to_cp437('‼'),
+                                200.0,
+                            );
+                            SufferDamage::new_damage(&mut suffering, ent, damage.damage);
+                        }
 
-                            if let Some(_) = activation.get(*ent_id) {
-                                remove_entities.push(*ent_id);
-                            }
+                        if let Some(_) = activation.get(*ent_id) {
+                            remove_entities.push(*ent_id);
                         }
                     }
                 });
         }
         // Removed traps with single-activation.
-        remove_entities.iter()
-            .for_each(|trap| {
-                entities.delete(*trap)
-                        .expect("Unable to delete trap.");
-            });
+        remove_entities.iter().for_each(|trap| {
+            entities.delete(*trap).expect("Unable to delete trap.");
+        });
         // Clear the list of moved entities.
         ent_moved.clear();
     }

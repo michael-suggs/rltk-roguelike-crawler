@@ -3,9 +3,11 @@ use std::{collections::HashMap, iter::repeat};
 use rltk::RandomNumberGenerator;
 use specs::prelude::*;
 
-use crate::{Map, MapBuilder, Position, SHOW_MAPGEN_VISUALIZER, TileType, spawner};
+use crate::{spawner, Map, MapBuilder, Position, TileType, SHOW_MAPGEN_VISUALIZER};
 
-use super::common::{generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant};
+use super::common::{
+    generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant,
+};
 
 pub struct CellularAutomataBuilder {
     map: Map,
@@ -21,7 +23,9 @@ impl MapBuilder for CellularAutomataBuilder {
     }
 
     fn spawn_entities(&mut self, ecs: &mut World) {
-        self.noise_areas.iter().for_each(|area| spawner::spawn_region(ecs, area.1, self.depth));
+        self.noise_areas
+            .iter()
+            .for_each(|area| spawner::spawn_region(ecs, area.1, self.depth));
     }
 
     fn get_map(&self) -> Map {
@@ -39,9 +43,7 @@ impl MapBuilder for CellularAutomataBuilder {
     fn take_snapshot(&mut self) {
         if SHOW_MAPGEN_VISUALIZER {
             let mut snapshot = self.map.clone();
-            snapshot.revealed_tiles
-                    .iter_mut()
-                    .for_each(|v| *v = true);
+            snapshot.revealed_tiles.iter_mut().for_each(|v| *v = true);
             self.history.push(snapshot);
         }
     }
@@ -86,18 +88,20 @@ impl CellularAutomataBuilder {
                     let mut neighbors = 0;
                     // Indices of all neighboring tiles for `idx`.
                     let neighbor_indices: Vec<usize> = vec![
-                        1, self.map.width as usize,
+                        1,
+                        self.map.width as usize,
                         self.map.width as usize - 1,
-                        self.map.width as usize + 1
+                        self.map.width as usize + 1,
                     ];
                     // Zip `idx` with neighbor vec and check how many neighbors are walls.
-                    neighbor_indices
-                        .iter()
-                        .zip(repeat(idx))
-                        .for_each(|(n, i)| {
-                            if self.map.tiles[i - n] == TileType::Wall { neighbors += 1; }
-                            if self.map.tiles[i + n] == TileType::Wall { neighbors += 1; }
-                        });
+                    neighbor_indices.iter().zip(repeat(idx)).for_each(|(n, i)| {
+                        if self.map.tiles[i - n] == TileType::Wall {
+                            neighbors += 1;
+                        }
+                        if self.map.tiles[i + n] == TileType::Wall {
+                            neighbors += 1;
+                        }
+                    });
                     // 0 or more than 4 neighbors--make it a wall; otherwise, it's a floor tile.
                     if neighbors > 4 || neighbors == 0 {
                         newtiles[idx] = TileType::Wall;
@@ -122,22 +126,26 @@ impl CellularAutomataBuilder {
     /// Finds a starting location relatively close to the center of the map.
     fn locate_start(&mut self) {
         self.starting_position = Position::from(self.map.center());
-        let mut start_idx = self.map.xy_idx(self.starting_position.x, self.starting_position.y);
+        let mut start_idx = self
+            .map
+            .xy_idx(self.starting_position.x, self.starting_position.y);
         while self.map.tiles[start_idx] != TileType::Floor {
             self.starting_position.x -= 1;
-            start_idx = self.map.xy_idx(self.starting_position.x, self.starting_position.y);
+            start_idx = self
+                .map
+                .xy_idx(self.starting_position.x, self.starting_position.y);
         }
     }
 
     /// Finds an exit reasonably far away from the player's starting location.
     fn locate_exit(&mut self) {
         // Make a vector of the player's start (since `DijkstraMap` implements multi-start).
-        let start_idx = self.map.xy_idx(self.starting_position.x, self.starting_position.y);
+        let start_idx = self
+            .map
+            .xy_idx(self.starting_position.x, self.starting_position.y);
         self.take_snapshot();
 
-        let exit_tile = remove_unreachable_areas_returning_most_distant(
-            &mut self.map, start_idx
-        );
+        let exit_tile = remove_unreachable_areas_returning_most_distant(&mut self.map, start_idx);
         self.take_snapshot();
 
         self.map.tiles[exit_tile] = TileType::DownStairs;

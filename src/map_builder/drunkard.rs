@@ -3,16 +3,18 @@ use std::collections::HashMap;
 use rltk::RandomNumberGenerator;
 use specs::prelude::*;
 
-use crate::{spawner, SHOW_MAPGEN_VISUALIZER};
 use super::common::{
-    remove_unreachable_areas_returning_most_distant,
-    generate_voronoi_spawn_regions
+    generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant,
 };
-use super::{MapBuilder, Map, TileType, Position};
+use super::{Map, MapBuilder, Position, TileType};
+use crate::{spawner, SHOW_MAPGEN_VISUALIZER};
 
 /// Sets where drunkards will start when generating a drunkards' walk map.
 #[derive(PartialEq, Copy, Clone)]
-pub enum DrunkSpawnMode { StartingPoint, Random }
+pub enum DrunkSpawnMode {
+    StartingPoint,
+    Random,
+}
 
 /// Controls how the drunkards will generate the map.
 pub struct DrunkardSettings {
@@ -63,10 +65,7 @@ impl MapBuilder for DrunkardsWalkBuilder {
     fn take_snapshot(&mut self) {
         if SHOW_MAPGEN_VISUALIZER {
             let mut snapshot = self.map.clone();
-            snapshot
-                .revealed_tiles
-                .iter_mut()
-                .for_each(|v| *v = true);
+            snapshot.revealed_tiles.iter_mut().for_each(|v| *v = true);
             self.history.push(snapshot);
         }
     }
@@ -93,7 +92,7 @@ impl DrunkardsWalkBuilder {
                 spawn_mode: DrunkSpawnMode::StartingPoint,
                 drunken_lifetime: 400,
                 floor_percent: 0.5,
-            }
+            },
         )
     }
 
@@ -105,7 +104,7 @@ impl DrunkardsWalkBuilder {
                 spawn_mode: DrunkSpawnMode::Random,
                 drunken_lifetime: 400,
                 floor_percent: 0.5,
-            }
+            },
         )
     }
 
@@ -117,7 +116,7 @@ impl DrunkardsWalkBuilder {
                 spawn_mode: DrunkSpawnMode::Random,
                 drunken_lifetime: 100,
                 floor_percent: 0.4,
-            }
+            },
         )
     }
 
@@ -127,7 +126,9 @@ impl DrunkardsWalkBuilder {
         let mut rng = RandomNumberGenerator::new();
 
         self.starting_position = Position::from(self.map.center());
-        let start_idx = self.map.xy_idx(self.starting_position.x, self.starting_position.y);
+        let start_idx = self
+            .map
+            .xy_idx(self.starting_position.x, self.starting_position.y);
         self.map.tiles[start_idx] = TileType::Floor;
 
         // Total number of tiles on the map
@@ -135,8 +136,12 @@ impl DrunkardsWalkBuilder {
         // Number of floor tiles we want on the generated map
         let desired_floor_tiles = (self.settings.floor_percent * total_tiles as f32) as usize;
         // Current number of floor tiles on the map
-        let mut floor_tile_count =
-            self.map.tiles.iter().filter(|t| **t == TileType::Floor).count();
+        let mut floor_tile_count = self
+            .map
+            .tiles
+            .iter()
+            .filter(|t| **t == TileType::Floor)
+            .count();
         // Number of diggers we've gone through during generation so far
         let mut digger_count = 0;
         // Number of diggers that have done something during generation
@@ -153,7 +158,7 @@ impl DrunkardsWalkBuilder {
                     // Start at the player's starting position
                     drunk_x = self.starting_position.x;
                     drunk_y = self.starting_position.y;
-                },
+                }
                 DrunkSpawnMode::Random => {
                     if digger_count == 0 {
                         // If this is the first drunkard, always start at the player's start
@@ -165,13 +170,12 @@ impl DrunkardsWalkBuilder {
                         drunk_x = rng.roll_dice(1, self.map.width - 3) + 1;
                         drunk_y = rng.roll_dice(1, self.map.height - 3) + 1;
                     }
-                },
+                }
             }
 
             // Create a drunk to stagger around the map
-            let mut drunk = DrunkDigger::new(
-                drunk_x, drunk_y, self.settings.drunken_lifetime, &mut rng
-            );
+            let mut drunk =
+                DrunkDigger::new(drunk_x, drunk_y, self.settings.drunken_lifetime, &mut rng);
 
             // This actually does the map generation, staggering the drunk around
             // the map and digging until its life expires.
@@ -189,7 +193,12 @@ impl DrunkardsWalkBuilder {
                 }
             });
             // Get the new floor tile count before finishing the loop
-            floor_tile_count = self.map.tiles.iter().filter(|t| **t == TileType::Floor).count();
+            floor_tile_count = self
+                .map
+                .tiles
+                .iter()
+                .filter(|t| **t == TileType::Floor)
+                .count();
         }
 
         // Get rid of unreachable areas and get the furthest reachable tile
@@ -229,7 +238,7 @@ impl<'a> DrunkDigger<'a> {
             did_something: false,
             life: life,
             rng: rng,
-            idx: usize::default()
+            idx: usize::default(),
         }
     }
 
@@ -253,7 +262,7 @@ impl<'a> DrunkDigger<'a> {
             // Get its position for the next iteration and reduce its remaining life
             self.stagger_direction(map);
             self.life -= 1;
-        };
+        }
     }
 
     /// Randomly generates the digger's new position, and moves them to it.
@@ -263,10 +272,26 @@ impl<'a> DrunkDigger<'a> {
         // position based on said roll. If movement would take the digger
         // outside the map bounds, do nothing instead.
         match self.rng.roll_dice(1, 4) {
-            1 => if self.x > 2 { self.x -= 1 },
-            2 => if self.x < map.width - 2 { self.x += 1; },
-            3 => if self.y > 2 { self.y -= 1; },
-            _ => if self.y < map.height - 2 { self.y += 1; },
+            1 => {
+                if self.x > 2 {
+                    self.x -= 1
+                }
+            }
+            2 => {
+                if self.x < map.width - 2 {
+                    self.x += 1;
+                }
+            }
+            3 => {
+                if self.y > 2 {
+                    self.y -= 1;
+                }
+            }
+            _ => {
+                if self.y < map.height - 2 {
+                    self.y += 1;
+                }
+            }
         };
     }
 }
