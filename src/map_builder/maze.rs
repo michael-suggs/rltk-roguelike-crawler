@@ -3,9 +3,11 @@ use std::collections::HashMap;
 use rltk::RandomNumberGenerator;
 use specs::World;
 
-use crate::{Map, MapBuilder, Position, SHOW_MAPGEN_VISUALIZER, TileType, spawner};
+use crate::{spawner, Map, MapBuilder, Position, TileType, SHOW_MAPGEN_VISUALIZER};
 
-use super::common::{generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant};
+use super::common::{
+    generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant,
+};
 
 const TOP: usize = 0;
 const RIGHT: usize = 1;
@@ -72,7 +74,9 @@ impl MazeBuilder {
         maze.generate_maze(self);
 
         self.starting_position = Position { x: 2, y: 2 };
-        let start_idx = self.map.xy_idx(self.starting_position.x, self.starting_position.y);
+        let start_idx = self
+            .map
+            .xy_idx(self.starting_position.x, self.starting_position.y);
         self.take_snapshot();
 
         let exit_tile = remove_unreachable_areas_returning_most_distant(&mut self.map, start_idx);
@@ -189,9 +193,9 @@ impl<'a> Grid<'a> {
             if neighbors.len() == 1 {
                 return Some(neighbors[0]);
             } else {
-                return Some(neighbors[
-                    (self.rng.roll_dice(1, neighbors.len() as i32) - 1) as usize
-                ]);
+                return Some(
+                    neighbors[(self.rng.roll_dice(1, neighbors.len() as i32) - 1) as usize],
+                );
             }
         }
         None
@@ -244,10 +248,18 @@ impl<'a> Grid<'a> {
             let idx = map.xy_idx(x * 2, y * 2);
 
             map.tiles[idx] = TileType::Floor;
-            if !cell.walls[TOP]    { map.tiles[idx - map.width as usize] = TileType::Floor }
-            if !cell.walls[RIGHT]  { map.tiles[idx + 1] = TileType::Floor }
-            if !cell.walls[BOTTOM] { map.tiles[idx + map.width as usize] = TileType::Floor }
-            if !cell.walls[LEFT]   { map.tiles[idx - 1] = TileType::Floor }
+            if !cell.walls[TOP] {
+                map.tiles[idx - map.width as usize] = TileType::Floor
+            }
+            if !cell.walls[RIGHT] {
+                map.tiles[idx + 1] = TileType::Floor
+            }
+            if !cell.walls[BOTTOM] {
+                map.tiles[idx + map.width as usize] = TileType::Floor
+            }
+            if !cell.walls[LEFT] {
+                map.tiles[idx - 1] = TileType::Floor
+            }
         }
     }
 }
