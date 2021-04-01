@@ -13,7 +13,11 @@ use super::{MapBuilder, Map, TileType, Position};
 #[derive(PartialEq, Copy, Clone)]
 pub enum DrunkSpawnMode { StartingPoint, Random }
 
-pub struct DrunkardSettings { pub spawn_mode: DrunkSpawnMode }
+pub struct DrunkardSettings {
+    pub spawn_mode: DrunkSpawnMode,
+    pub drunken_lifetime: i32,
+    pub floor_percent: f32,
+}
 
 pub struct DrunkardsWalkBuilder {
     map: Map,
@@ -71,6 +75,39 @@ impl DrunkardsWalkBuilder {
         }
     }
 
+    pub fn open_area(new_depth: i32) -> DrunkardsWalkBuilder {
+        DrunkardsWalkBuilder::new(
+            new_depth,
+            DrunkardSettings {
+                spawn_mode: DrunkSpawnMode::StartingPoint,
+                drunken_lifetime: 400,
+                floor_percent: 0.5,
+            }
+        )
+    }
+
+    pub fn open_halls(new_depth: i32) -> DrunkardsWalkBuilder {
+        DrunkardsWalkBuilder::new(
+            new_depth,
+            DrunkardSettings {
+                spawn_mode: DrunkSpawnMode::Random,
+                drunken_lifetime: 400,
+                floor_percent: 0.5,
+            }
+        )
+    }
+
+    pub fn winding_passages(new_depth: i32) -> DrunkardsWalkBuilder {
+        DrunkardsWalkBuilder::new(
+            new_depth,
+            DrunkardSettings {
+                spawn_mode: DrunkSpawnMode::Random,
+                drunken_lifetime: 100,
+                floor_percent: 0.4,
+            }
+        )
+    }
+
     #[allow(clippy::map_entry)]
     fn build(&mut self) {
         let mut rng = RandomNumberGenerator::new();
@@ -80,7 +117,7 @@ impl DrunkardsWalkBuilder {
         self.map.tiles[start_idx] = TileType::Floor;
 
         let total_tiles = self.map.width * self.map.height;
-        let desired_floor_tiles = (total_tiles / 2) as usize;
+        let desired_floor_tiles = (self.settings.floor_percent * total_tiles as f32) as usize;
         let mut floor_tile_count =
             self.map.tiles.iter().filter(|t| **t == TileType::Floor).count();
         let mut digger_count = 0;
@@ -106,7 +143,9 @@ impl DrunkardsWalkBuilder {
                 },
             }
 
-            let mut drunk = DrunkDigger::new(drunk_x, drunk_y, &mut rng);
+            let mut drunk = DrunkDigger::new(
+                drunk_x, drunk_y, self.settings.drunken_lifetime, &mut rng
+            );
 
             drunk.stagger(&mut self.map);
             if drunk.did_something {
@@ -143,12 +182,12 @@ pub struct DrunkDigger<'a> {
 }
 
 impl<'a> DrunkDigger<'a> {
-    pub fn new(x: i32, y: i32, rng: &mut RandomNumberGenerator) -> DrunkDigger {
+    pub fn new(x: i32, y: i32, life: i32, rng: &mut RandomNumberGenerator) -> DrunkDigger {
         DrunkDigger {
             x: x,
             y: y,
             did_something: false,
-            life: 400,
+            life: life,
             rng: rng,
             idx: usize::default()
         }
