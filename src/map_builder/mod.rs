@@ -19,6 +19,7 @@ mod common;
 mod drunkard;
 mod simple_map;
 
+/// Basic functionality all [`MapBuilder`] implementors must have.
 pub trait MapBuilder {
     fn build_map(&mut self);
     fn spawn_entities(&mut self, ecs: &mut World);
@@ -28,6 +29,7 @@ pub trait MapBuilder {
     fn take_snapshot(&mut self);
 }
 
+/// Generates a new [`Map`] at a given depth using a random [`MapBuilder`].
 pub fn random_builder(new_depth: i32) -> Box<dyn MapBuilder> {
     let mut rng = rltk::RandomNumberGenerator::new();
     match rng.roll_dice(1, 7) {

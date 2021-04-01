@@ -34,6 +34,7 @@ pub struct Map {
 }
 
 impl Map {
+    /// Generates a new, empty map.
     pub fn new(new_depth: i32) -> Map {
         Map {
             tiles: vec![TileType::Wall; MAPCOUNT],
@@ -48,14 +49,17 @@ impl Map {
         }
     }
 
+    /// Returns the (x, y) coordinates of the map's center.
     pub fn center(&self) -> (i32, i32) {
         (self.width / 2, self.height / 2)
     }
 
+    /// Checks if movement by (d_x, d_y) amount will violate map bounds.
     pub fn in_bounds(&self, x: i32, d_x: i32, y: i32, d_y: i32) -> bool {
         x + d_x >= 1 && x + d_x < self.width - 1 && y + d_y >= 1 && y + d_y < self.height - 1
     }
 
+    /// Gets 1D index (for [`Map::tiles`]) from passed 2D coordinates.
     pub fn xy_idx(&self, x: i32, y: i32) -> usize {
         (y as usize * self.width as usize) + x as usize
     }
@@ -131,6 +135,7 @@ impl BaseMap for Map {
     }
 }
 
+/// Renders the map to the terminal screen.
 pub fn draw_map(map: &Map, ctx: &mut Rltk) {
     let mut y = 0;
     let mut x = 0;
