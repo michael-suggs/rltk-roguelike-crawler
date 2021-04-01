@@ -96,6 +96,10 @@ impl Map {
             .map(|(y, x)| (x, y))
             .collect::<Vec<(i32, i32)>>()
     }
+
+    pub fn count_floor_tiles(&self) -> usize {
+        self.tiles.iter().filter(|t| **t == TileType::Floor).count()
+    }
 }
 
 impl Algorithm2D for Map {

@@ -92,20 +92,11 @@ impl DLABuilder {
 
         // let total_tiles = self.map.tiles.len() as i32;
         let desired_floor_tiles = (self.floor_percent * self.map.tiles.len() as f32) as usize;
-        let mut floor_tile_count = self
-            .map
-            .tiles
-            .iter()
-            .filter(|t| **t == TileType::Floor)
-            .count();
 
         match self.algorithm {
-            DLAAlgorithm::WalkInwards => {
-                self.walk_inwards(floor_tile_count, desired_floor_tiles, &mut rng)
-            }
-            _ => {
-                todo!()
-            }
+            DLAAlgorithm::WalkInwards => self.walk_inwards(desired_floor_tiles, &mut rng),
+            DLAAlgorithm::WalkOutwards => self.walk_outwards(desired_floor_tiles, &mut rng),
+            _ => todo!(),
         }
     }
 
@@ -122,13 +113,8 @@ impl DLABuilder {
         self.map.tiles[idx] = TileType::Floor;
     }
 
-    fn walk_inwards(
-        &mut self,
-        floor_tile_count: usize,
-        desired_floor_tiles: usize,
-        rng: &mut RandomNumberGenerator,
-    ) {
-        let mut floor_tile_count = floor_tile_count;
+    fn walk_inwards(&mut self, desired_floor_tiles: usize, rng: &mut RandomNumberGenerator) {
+        let mut floor_tile_count = self.map.count_floor_tiles();
         while floor_tile_count < desired_floor_tiles {
             let mut drunk = DrunkDigger::new(
                 rng.roll_dice(1, self.map.width - 3) + 1,
@@ -136,14 +122,21 @@ impl DLABuilder {
                 rng,
             );
 
-            let (prev_x, prev_y) = drunk.stagger_tiles(&mut self.map);
+            let (prev_x, prev_y) = drunk.stagger_tiles(&mut self.map, TileType::Wall);
             self.paint(prev_x, prev_y);
-            floor_tile_count = self
-                .map
-                .tiles
-                .iter()
-                .filter(|t| **t == TileType::Floor)
-                .count();
+            floor_tile_count = self.map.count_floor_tiles();
         }
+    }
+
+    fn walk_outwards(&mut self, desired_floor_tiles: usize, rng: &mut RandomNumberGenerator) {
+        let mut floor_tile_count = self.map.count_floor_tiles();
+        let mut drunk = DrunkDigger::new(self.starting_position.x, self.starting_position.y, rng);
+
+        while floor_tile_count < desired_floor_tiles {
+            drunk.stagger_tiles(&mut self.map, TileType::Floor);
+            floor_tile_count = self.map.count_floor_tiles();
+        }
+
+        self.paint(drunk.x, drunk.y);
     }
 }

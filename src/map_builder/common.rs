@@ -163,9 +163,9 @@ impl<'a> DrunkDigger<'a> {
         }
     }
 
-    pub fn stagger_tiles(&mut self, map: &mut Map) -> (i32, i32) {
+    pub fn stagger_tiles(&mut self, map: &mut Map, tile_type: TileType) -> (i32, i32) {
         let mut prev_pos: (i32, i32) = (self.x, self.y);
-        while map.tiles[self.idx] == TileType::Wall {
+        while map.tiles[self.idx] == tile_type {
             prev_pos = (self.x, self.y);
             self.stagger_direction(map);
             self.idx = map.xy_idx(self.x, self.y);
@@ -175,7 +175,7 @@ impl<'a> DrunkDigger<'a> {
 
     /// Randomly generates the digger's new position, and moves them to it.
     /// Moves one tile (at most) in one of the four cardinal directions.
-    pub fn stagger_direction(&mut self, map: &Map) {
+    fn stagger_direction(&mut self, map: &Map) {
         // Roll dice to pick a direction to move, then update the digger's
         // position based on said roll. If movement would take the digger
         // outside the map bounds, do nothing instead.
