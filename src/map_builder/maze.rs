@@ -66,13 +66,13 @@ impl MazeBuilder {
     #[allow(clippy::map_entry)]
     fn build(&mut self) {
         let mut rng = RandomNumberGenerator::new();
+        let (cx, cy) = self.map.center();
 
-        self.starting_position = Position::from(self.map.center());
-        let mut start_idx = self.map.xy_idx(self.starting_position.x, self.starting_position.y);
-        while self.map.tiles[start_idx] != TileType::Floor {
-            self.starting_position.x -= 1;
-            start_idx = self.map.xy_idx(self.starting_position.x, self.starting_position.y);
-        }
+        let mut maze = Grid::new(cx - 2, cy - 2, &mut rng);
+        maze.generate_maze(self);
+
+        self.starting_position = Position { x: 2, y: 2 };
+        let start_idx = self.map.xy_idx(self.starting_position.x, self.starting_position.y);
         self.take_snapshot();
 
         let exit_tile = remove_unreachable_areas_returning_most_distant(&mut self.map, start_idx);
@@ -174,11 +174,11 @@ impl<'a> Grid<'a> {
             self.calculate_index(current_row, current_col - 1),
         ];
 
-        neighbor_indices.iter().for_each(|i| {
+        for i in neighbor_indices.iter() {
             if *i != -1 && !self.cells[*i as usize].visited {
                 neighbors.push(*i as usize);
             }
-        });
+        }
 
         neighbors
     }
@@ -231,7 +231,6 @@ impl<'a> Grid<'a> {
                 self.copy_to_map(&mut generator.map);
                 generator.take_snapshot();
             }
-
             i += 1;
         }
     }
@@ -242,7 +241,7 @@ impl<'a> Grid<'a> {
         for cell in self.cells.iter() {
             let x = cell.col + 1;
             let y = cell.row + 1;
-            let idx = map.xy_idx(x, y);
+            let idx = map.xy_idx(x * 2, y * 2);
 
             map.tiles[idx] = TileType::Floor;
             if !cell.walls[TOP]    { map.tiles[idx - map.width as usize] = TileType::Floor }
