@@ -71,7 +71,7 @@ impl MapBuilder for DLABuilder {
 
 impl DLABuilder {
     pub fn new_random(new_depth: i32) -> DLABuilder {
-        let rng = rltk::RandomNumberGenerator::new();
+        let mut rng = rltk::RandomNumberGenerator::new();
         DLABuilder {
             map: Map::new(new_depth),
             starting_position: Position { x: 0, y: 0 },
@@ -231,8 +231,8 @@ impl DLABuilder {
         } else {
             // Else, loop through brush size
             let half_brush = self.brush_size / 2;
-            for brush_y in y - half_brush .. y + half_brush {
-                for brush_x in x - half_brush .. x + half_brush {
+            for brush_y in y - half_brush..y + half_brush {
+                for brush_x in x - half_brush..x + half_brush {
                     // Make sure the `half_brush` index is in bounds
                     if self.map.in_bounds(brush_x, 0, brush_y, 0) {
                         // Paint at each `half_brush` index

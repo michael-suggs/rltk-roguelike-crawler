@@ -5,6 +5,14 @@ use std::{
     iter,
 };
 
+#[derive(PartialEq, Clone, Copy)]
+pub enum Symmetry {
+    None,
+    Horizontal,
+    Vertical,
+    Both,
+}
+
 /// Places a rectangular room onto the [`Map`] by setting all tiles within its
 /// boundaries to [`TileType::Floor`] tiles.
 pub fn apply_room_to_map(map: &mut Map, room: &Rect) {
