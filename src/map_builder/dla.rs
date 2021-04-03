@@ -109,8 +109,62 @@ impl DLABuilder {
     }
 
     fn paint(&mut self, x: i32, y: i32) {
+        let center = Position::from(self.map.center());
         let idx = self.map.xy_idx(x, y);
         self.map.tiles[idx] = TileType::Floor;
+
+        match self.symmetry {
+            DLASymmetry::None => self.apply_paint(x, y),
+            DLASymmetry::Horizontal => {
+                if x == center.x {
+                    self.apply_paint(x, y);
+                } else {
+                    let d_x = i32::abs(center.x - x);
+                    self.apply_paint(center.x + d_x, y);
+                    self.apply_paint(center.x - d_x, y);
+                }
+            }
+            DLASymmetry::Vertical => {
+                if y == center.y {
+                    self.apply_paint(x, y);
+                } else {
+                    let d_y = i32::abs(center.y - y);
+                    self.apply_paint(x, center.y + d_y);
+                    self.apply_paint(x, center.y + d_y);
+                }
+            }
+            DLASymmetry::Both => {
+                let (center_x, center_y) = center.into();
+                if (x, y) == (center_x, center_y) {
+                    self.apply_paint(x, y);
+                } else {
+                    let d_x = i32::abs(center_x - x);
+                    self.apply_paint(center_x + d_x, y);
+                    self.apply_paint(center_x - d_x, y);
+
+                    let d_y = i32::abs(center_y - y);
+                    self.apply_paint(x, center_y + d_y);
+                    self.apply_paint(x, center_y - d_y);
+                }
+            }
+        }
+    }
+
+    fn apply_paint(&mut self, x: i32, y: i32) {
+        if self.brush_size == 1 {
+            let idx = self.map.xy_idx(x, y);
+            self.map.tiles[idx] = TileType::Floor;
+        } else {
+            let half_brush = self.brush_size / 2;
+            for brush_y in y - half_brush .. y + half_brush {
+                for brush_x in x - half_brush .. x + half_brush {
+                    if self.map.in_bounds(brush_x, 0, brush_y, 0) {
+                        let idx = self.map.xy_idx(brush_x, brush_y);
+                        self.map.tiles[idx] = TileType::Floor;
+                    }
+                }
+            }
+        }
     }
 
     fn walk_inwards(&mut self, desired_floor_tiles: usize, rng: &mut RandomNumberGenerator) {
