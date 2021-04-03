@@ -1,4 +1,10 @@
+use crate::Position;
+
 use super::{Map, Rect, TileType};
+use rand::{
+    distributions::{Distribution, Standard},
+    Rng,
+};
 use std::{
     cmp::{max, min},
     collections::HashMap,
@@ -209,5 +215,91 @@ impl<'a> DrunkDigger<'a> {
                 }
             }
         };
+    }
+}
+
+impl Distribution<Symmetry> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Symmetry {
+        match rng.gen_range(0..=3) {
+            0 => Symmetry::None,
+            1 => Symmetry::Horizontal,
+            2 => Symmetry::Vertical,
+            _ => Symmetry::Both,
+        }
+    }
+}
+
+pub fn paint(map: &mut Map, mode: Symmetry, brush_size: i32, x: i32, y: i32) {
+    let center = Position::from(map.center());
+    let idx = map.xy_idx(x, y);
+    map.tiles[idx] = TileType::Floor;
+
+    // Match on symmetry type
+    match mode {
+        // No symmetry--just paint
+        Symmetry::None => apply_paint(map, brush_size, x, y),
+        Symmetry::Horizontal => {
+            if x == center.x {
+                // If on the tile, paint it
+                apply_paint(map, brush_size, x, y);
+            } else {
+                // Else, apply paint symmetrically in the x-direction
+                // based on distance from it
+                let d_x = i32::abs(center.x - x);
+                apply_paint(map, brush_size, center.x + d_x, y);
+                apply_paint(map, brush_size, center.x - d_x, y);
+            }
+        }
+        Symmetry::Vertical => {
+            if y == center.y {
+                // If on the tile, paint it
+                apply_paint(map, brush_size, x, y);
+            } else {
+                // Else, apply paint symmetrically in the y-direction
+                // based on distance from it
+                let d_y = i32::abs(center.y - y);
+                apply_paint(map, brush_size, x, center.y + d_y);
+                apply_paint(map, brush_size, x, center.y + d_y);
+            }
+        }
+        Symmetry::Both => {
+            // Break center down into parts to appease the borrow checker
+            let (center_x, center_y) = center.into();
+            if (x, y) == (center_x, center_y) {
+                // If on the tile, paint it
+                apply_paint(map, brush_size, x, y);
+            } else {
+                // Apply symmetric paint horizontally about the tile
+                let d_x = i32::abs(center_x - x);
+                apply_paint(map, brush_size, center_x + d_x, y);
+                apply_paint(map, brush_size, center_x - d_x, y);
+                // Apply symmetric paint vertically about the tile
+                let d_y = i32::abs(center_y - y);
+                apply_paint(map, brush_size, x, center_y + d_y);
+                apply_paint(map, brush_size, x, center_y - d_y);
+            }
+        }
+    }
+}
+
+/// Applies paint to a tile based on brush size.
+fn apply_paint(map: &mut Map, brush_size: i32, x: i32, y: i32) {
+    if brush_size == 1 {
+        // Single-tile brush--paint just that floor tile
+        let idx = map.xy_idx(x, y);
+        map.tiles[idx] = TileType::Floor;
+    } else {
+        // Else, loop through brush size
+        let half_brush = brush_size / 2;
+        for brush_y in y - half_brush..y + half_brush {
+            for brush_x in x - half_brush..x + half_brush {
+                // Make sure the `half_brush` index is in bounds
+                if map.in_bounds(brush_x, 0, brush_y, 0) {
+                    // Paint at each `half_brush` index
+                    let idx = map.xy_idx(brush_x, brush_y);
+                    map.tiles[idx] = TileType::Floor;
+                }
+            }
+        }
     }
 }

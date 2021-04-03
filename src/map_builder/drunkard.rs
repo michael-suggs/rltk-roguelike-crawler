@@ -5,6 +5,7 @@ use specs::prelude::*;
 
 use super::common::{
     generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant, DrunkDigger,
+    Symmetry,
 };
 use super::{Map, MapBuilder, Position, TileType};
 use crate::{spawner, SHOW_MAPGEN_VISUALIZER};

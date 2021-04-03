@@ -8,21 +8,13 @@ use rltk::RandomNumberGenerator;
 
 use crate::{spawner, Map, MapBuilder, Position, TileType, SHOW_MAPGEN_VISUALIZER};
 
-use super::common::DrunkDigger;
+use super::common::{paint, DrunkDigger, Symmetry};
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum DLAAlgorithm {
     WalkInwards,
     WalkOutwards,
     CentralAttractor,
-}
-
-#[derive(PartialEq, Clone, Copy)]
-pub enum DLASymmetry {
-    None,
-    Horizontal,
-    Vertical,
-    Both,
 }
 
 pub struct DLABuilder {
@@ -32,7 +24,7 @@ pub struct DLABuilder {
     history: Vec<Map>,
     noise_areas: HashMap<i32, Vec<usize>>,
     algorithm: DLAAlgorithm,
-    symmetry: DLASymmetry,
+    symmetry: Symmetry,
     brush_size: i32,
     floor_percent: f32,
 }
@@ -93,7 +85,7 @@ impl DLABuilder {
             history: Vec::new(),
             noise_areas: HashMap::new(),
             algorithm: DLAAlgorithm::WalkInwards,
-            symmetry: DLASymmetry::None,
+            symmetry: Symmetry::None,
             brush_size: 1,
             floor_percent: 0.25,
         }
@@ -107,7 +99,7 @@ impl DLABuilder {
             history: Vec::new(),
             noise_areas: HashMap::new(),
             algorithm: DLAAlgorithm::WalkOutwards,
-            symmetry: DLASymmetry::None,
+            symmetry: Symmetry::None,
             brush_size: 2,
             floor_percent: 0.25,
         }
@@ -121,7 +113,7 @@ impl DLABuilder {
             history: Vec::new(),
             noise_areas: HashMap::new(),
             algorithm: DLAAlgorithm::WalkInwards,
-            symmetry: DLASymmetry::None,
+            symmetry: Symmetry::None,
             brush_size: 2,
             floor_percent: 0.25,
         }
@@ -135,7 +127,7 @@ impl DLABuilder {
             history: Vec::new(),
             noise_areas: HashMap::new(),
             algorithm: DLAAlgorithm::WalkInwards,
-            symmetry: DLASymmetry::Horizontal,
+            symmetry: Symmetry::Horizontal,
             brush_size: 2,
             floor_percent: 0.25,
         }
@@ -169,81 +161,6 @@ impl DLABuilder {
         self.map.tiles[start_idx + self.map.width as usize] = TileType::Floor;
     }
 
-    fn paint(&mut self, x: i32, y: i32) {
-        let center = Position::from(self.map.center());
-        let idx = self.map.xy_idx(x, y);
-        self.map.tiles[idx] = TileType::Floor;
-
-        // Match on symmetry type
-        match self.symmetry {
-            // No symmetry--just paint
-            DLASymmetry::None => self.apply_paint(x, y),
-            DLASymmetry::Horizontal => {
-                if x == center.x {
-                    // If on the tile, paint it
-                    self.apply_paint(x, y);
-                } else {
-                    // Else, apply paint symmetrically in the x-direction
-                    // based on distance from it
-                    let d_x = i32::abs(center.x - x);
-                    self.apply_paint(center.x + d_x, y);
-                    self.apply_paint(center.x - d_x, y);
-                }
-            }
-            DLASymmetry::Vertical => {
-                if y == center.y {
-                    // If on the tile, paint it
-                    self.apply_paint(x, y);
-                } else {
-                    // Else, apply paint symmetrically in the y-direction
-                    // based on distance from it
-                    let d_y = i32::abs(center.y - y);
-                    self.apply_paint(x, center.y + d_y);
-                    self.apply_paint(x, center.y + d_y);
-                }
-            }
-            DLASymmetry::Both => {
-                // Break center down into parts to appease the borrow checker
-                let (center_x, center_y) = center.into();
-                if (x, y) == (center_x, center_y) {
-                    // If on the tile, paint it
-                    self.apply_paint(x, y);
-                } else {
-                    // Apply symmetric paint horizontally about the tile
-                    let d_x = i32::abs(center_x - x);
-                    self.apply_paint(center_x + d_x, y);
-                    self.apply_paint(center_x - d_x, y);
-                    // Apply symmetric paint vertically about the tile
-                    let d_y = i32::abs(center_y - y);
-                    self.apply_paint(x, center_y + d_y);
-                    self.apply_paint(x, center_y - d_y);
-                }
-            }
-        }
-    }
-
-    /// Applies paint to a tile based on brush size.
-    fn apply_paint(&mut self, x: i32, y: i32) {
-        if self.brush_size == 1 {
-            // Single-tile brush--paint just that floor tile
-            let idx = self.map.xy_idx(x, y);
-            self.map.tiles[idx] = TileType::Floor;
-        } else {
-            // Else, loop through brush size
-            let half_brush = self.brush_size / 2;
-            for brush_y in y - half_brush..y + half_brush {
-                for brush_x in x - half_brush..x + half_brush {
-                    // Make sure the `half_brush` index is in bounds
-                    if self.map.in_bounds(brush_x, 0, brush_y, 0) {
-                        // Paint at each `half_brush` index
-                        let idx = self.map.xy_idx(brush_x, brush_y);
-                        self.map.tiles[idx] = TileType::Floor;
-                    }
-                }
-            }
-        }
-    }
-
     fn walk_inwards(&mut self, desired_floor_tiles: usize, rng: &mut RandomNumberGenerator) {
         let mut floor_tile_count = self.map.count_floor_tiles();
         while floor_tile_count < desired_floor_tiles {
@@ -254,7 +171,13 @@ impl DLABuilder {
             );
 
             let (prev_x, prev_y) = drunk.stagger_tiles(&mut self.map, TileType::Wall);
-            self.paint(prev_x, prev_y);
+            paint(
+                &mut self.map,
+                self.symmetry,
+                self.brush_size,
+                prev_x,
+                prev_y,
+            );
             floor_tile_count = self.map.count_floor_tiles();
         }
     }
@@ -268,7 +191,13 @@ impl DLABuilder {
             floor_tile_count = self.map.count_floor_tiles();
         }
 
-        self.paint(drunk.x, drunk.y);
+        paint(
+            &mut self.map,
+            self.symmetry,
+            self.brush_size,
+            drunk.x,
+            drunk.y,
+        );
     }
 
     fn central_attractor(&mut self, desired_floor_tiles: usize, rng: &mut RandomNumberGenerator) {
@@ -297,7 +226,13 @@ impl DLABuilder {
                 digger_idx = self.map.xy_idx(digger.x, digger.y);
             }
 
-            self.paint(prev.x, prev.y);
+            paint(
+                &mut self.map,
+                self.symmetry,
+                self.brush_size,
+                prev.x,
+                prev.y,
+            );
             floor_tile_count = self.map.count_floor_tiles();
         }
     }
@@ -309,17 +244,6 @@ impl Distribution<DLAAlgorithm> for Standard {
             0 => DLAAlgorithm::WalkInwards,
             1 => DLAAlgorithm::WalkOutwards,
             _ => DLAAlgorithm::CentralAttractor,
-        }
-    }
-}
-
-impl Distribution<DLASymmetry> for Standard {
-    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> DLASymmetry {
-        match rng.gen_range(0..=3) {
-            0 => DLASymmetry::None,
-            1 => DLASymmetry::Horizontal,
-            2 => DLASymmetry::Vertical,
-            _ => DLASymmetry::Both,
         }
     }
 }
