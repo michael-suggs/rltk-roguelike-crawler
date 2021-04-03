@@ -1,3 +1,7 @@
+use rand::{
+    distributions::{Distribution, Standard},
+    Rng,
+};
 use std::collections::HashMap;
 
 use rltk::RandomNumberGenerator;
@@ -66,7 +70,22 @@ impl MapBuilder for DLABuilder {
 }
 
 impl DLABuilder {
-    pub fn new(new_depth: i32) -> DLABuilder {
+    pub fn new_random(new_depth: i32) -> DLABuilder {
+        let rng = rltk::RandomNumberGenerator::new();
+        DLABuilder {
+            map: Map::new(new_depth),
+            starting_position: Position { x: 0, y: 0 },
+            depth: new_depth,
+            history: Vec::new(),
+            noise_areas: HashMap::new(),
+            algorithm: rand::random(),
+            symmetry: rand::random(),
+            brush_size: rng.roll_dice(1, 3),
+            floor_percent: 0.25,
+        }
+    }
+
+    pub fn new_walk_inwards(new_depth: i32) -> DLABuilder {
         DLABuilder {
             map: Map::new(new_depth),
             starting_position: Position { x: 0, y: 0 },
@@ -76,6 +95,48 @@ impl DLABuilder {
             algorithm: DLAAlgorithm::WalkInwards,
             symmetry: DLASymmetry::None,
             brush_size: 1,
+            floor_percent: 0.25,
+        }
+    }
+
+    pub fn new_walk_outwards(new_depth: i32) -> DLABuilder {
+        DLABuilder {
+            map: Map::new(new_depth),
+            starting_position: Position { x: 0, y: 0 },
+            depth: new_depth,
+            history: Vec::new(),
+            noise_areas: HashMap::new(),
+            algorithm: DLAAlgorithm::WalkOutwards,
+            symmetry: DLASymmetry::None,
+            brush_size: 2,
+            floor_percent: 0.25,
+        }
+    }
+
+    pub fn new_central_attractor(new_depth: i32) -> DLABuilder {
+        DLABuilder {
+            map: Map::new(new_depth),
+            starting_position: Position { x: 0, y: 0 },
+            depth: new_depth,
+            history: Vec::new(),
+            noise_areas: HashMap::new(),
+            algorithm: DLAAlgorithm::WalkInwards,
+            symmetry: DLASymmetry::None,
+            brush_size: 2,
+            floor_percent: 0.25,
+        }
+    }
+
+    pub fn new_insectoid(new_depth: i32) -> DLABuilder {
+        DLABuilder {
+            map: Map::new(new_depth),
+            starting_position: Position { x: 0, y: 0 },
+            depth: new_depth,
+            history: Vec::new(),
+            noise_areas: HashMap::new(),
+            algorithm: DLAAlgorithm::WalkInwards,
+            symmetry: DLASymmetry::Horizontal,
+            brush_size: 2,
             floor_percent: 0.25,
         }
     }
@@ -113,12 +174,17 @@ impl DLABuilder {
         let idx = self.map.xy_idx(x, y);
         self.map.tiles[idx] = TileType::Floor;
 
+        // Match on symmetry type
         match self.symmetry {
+            // No symmetry--just paint
             DLASymmetry::None => self.apply_paint(x, y),
             DLASymmetry::Horizontal => {
                 if x == center.x {
+                    // If on the tile, paint it
                     self.apply_paint(x, y);
                 } else {
+                    // Else, apply paint symmetrically in the x-direction
+                    // based on distance from it
                     let d_x = i32::abs(center.x - x);
                     self.apply_paint(center.x + d_x, y);
                     self.apply_paint(center.x - d_x, y);
@@ -126,22 +192,28 @@ impl DLABuilder {
             }
             DLASymmetry::Vertical => {
                 if y == center.y {
+                    // If on the tile, paint it
                     self.apply_paint(x, y);
                 } else {
+                    // Else, apply paint symmetrically in the y-direction
+                    // based on distance from it
                     let d_y = i32::abs(center.y - y);
                     self.apply_paint(x, center.y + d_y);
                     self.apply_paint(x, center.y + d_y);
                 }
             }
             DLASymmetry::Both => {
+                // Break center down into parts to appease the borrow checker
                 let (center_x, center_y) = center.into();
                 if (x, y) == (center_x, center_y) {
+                    // If on the tile, paint it
                     self.apply_paint(x, y);
                 } else {
+                    // Apply symmetric paint horizontally about the tile
                     let d_x = i32::abs(center_x - x);
                     self.apply_paint(center_x + d_x, y);
                     self.apply_paint(center_x - d_x, y);
-
+                    // Apply symmetric paint vertically about the tile
                     let d_y = i32::abs(center_y - y);
                     self.apply_paint(x, center_y + d_y);
                     self.apply_paint(x, center_y - d_y);
@@ -150,15 +222,20 @@ impl DLABuilder {
         }
     }
 
+    /// Applies paint to a tile based on brush size.
     fn apply_paint(&mut self, x: i32, y: i32) {
         if self.brush_size == 1 {
+            // Single-tile brush--paint just that floor tile
             let idx = self.map.xy_idx(x, y);
             self.map.tiles[idx] = TileType::Floor;
         } else {
+            // Else, loop through brush size
             let half_brush = self.brush_size / 2;
             for brush_y in y - half_brush .. y + half_brush {
                 for brush_x in x - half_brush .. x + half_brush {
+                    // Make sure the `half_brush` index is in bounds
                     if self.map.in_bounds(brush_x, 0, brush_y, 0) {
+                        // Paint at each `half_brush` index
                         let idx = self.map.xy_idx(brush_x, brush_y);
                         self.map.tiles[idx] = TileType::Floor;
                     }
@@ -222,6 +299,27 @@ impl DLABuilder {
 
             self.paint(prev.x, prev.y);
             floor_tile_count = self.map.count_floor_tiles();
+        }
+    }
+}
+
+impl Distribution<DLAAlgorithm> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> DLAAlgorithm {
+        match rng.gen_range(0..=2) {
+            0 => DLAAlgorithm::WalkInwards,
+            1 => DLAAlgorithm::WalkOutwards,
+            _ => DLAAlgorithm::CentralAttractor,
+        }
+    }
+}
+
+impl Distribution<DLASymmetry> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> DLASymmetry {
+        match rng.gen_range(0..=3) {
+            0 => DLASymmetry::None,
+            1 => DLASymmetry::Horizontal,
+            2 => DLASymmetry::Vertical,
+            _ => DLASymmetry::Both,
         }
     }
 }
