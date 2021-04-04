@@ -4,7 +4,7 @@ use rltk::RandomNumberGenerator;
 use specs::prelude::*;
 
 use super::common::{
-    generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant, DrunkDigger,
+    generate_voronoi_spawn_regions, paint, remove_unreachable_areas_returning_most_distant, Digger,
     Symmetry,
 };
 use super::{Map, MapBuilder, Position, TileType};
@@ -18,10 +18,13 @@ pub enum DrunkSpawnMode {
 }
 
 /// Controls how the drunkards will generate the map.
+#[derive(Copy, Clone)]
 pub struct DrunkardSettings {
     pub spawn_mode: DrunkSpawnMode,
-    pub drunken_lifetime: i32,
+    pub lifespan: i32,
     pub floor_percent: f32,
+    pub brush_size: i32,
+    pub symmetry: Symmetry,
 }
 
 /// Builder to construct a drunkards' walk map.
@@ -91,8 +94,10 @@ impl DrunkardsWalkBuilder {
             new_depth,
             DrunkardSettings {
                 spawn_mode: DrunkSpawnMode::StartingPoint,
-                drunken_lifetime: 400,
+                lifespan: 400,
                 floor_percent: 0.5,
+                brush_size: 1,
+                symmetry: Symmetry::None,
             },
         )
     }
@@ -103,8 +108,10 @@ impl DrunkardsWalkBuilder {
             new_depth,
             DrunkardSettings {
                 spawn_mode: DrunkSpawnMode::Random,
-                drunken_lifetime: 400,
+                lifespan: 400,
                 floor_percent: 0.5,
+                brush_size: 1,
+                symmetry: Symmetry::None,
             },
         )
     }
@@ -115,8 +122,38 @@ impl DrunkardsWalkBuilder {
             new_depth,
             DrunkardSettings {
                 spawn_mode: DrunkSpawnMode::Random,
-                drunken_lifetime: 100,
+                lifespan: 100,
                 floor_percent: 0.4,
+                brush_size: 1,
+                symmetry: Symmetry::None,
+            },
+        )
+    }
+
+    /// Generates a map with double-sized corridors--gives a cave-like map.
+    pub fn fat_passages(new_depth: i32) -> DrunkardsWalkBuilder {
+        DrunkardsWalkBuilder::new(
+            new_depth,
+            DrunkardSettings {
+                spawn_mode: DrunkSpawnMode::Random,
+                lifespan: 100,
+                floor_percent: 0.4,
+                brush_size: 2,
+                symmetry: Symmetry::None,
+            },
+        )
+    }
+
+    /// Generates a winding-passages map with symmetry in both directions.
+    pub fn fearful_symmetry(new_depth: i32) -> DrunkardsWalkBuilder {
+        DrunkardsWalkBuilder::new(
+            new_depth,
+            DrunkardSettings {
+                spawn_mode: DrunkSpawnMode::Random,
+                lifespan: 100,
+                floor_percent: 0.4,
+                brush_size: 1,
+                symmetry: Symmetry::Both,
             },
         )
     }
@@ -175,11 +212,11 @@ impl DrunkardsWalkBuilder {
             }
 
             // Create a drunk to stagger around the map
-            let mut drunk = DrunkDigger::new(drunk_x, drunk_y, &mut rng);
+            let mut drunk = DrunkDigger::new(drunk_x, drunk_y, self.settings);
 
             // This actually does the map generation, staggering the drunk around
             // the map and digging until its life expires.
-            drunk.stagger_lifetime(&mut self.map, self.settings.drunken_lifetime);
+            drunk.stagger(&mut self.map, &mut rng);
             if drunk.did_something {
                 self.take_snapshot();
                 active_digger_count += 1;
@@ -211,5 +248,79 @@ impl DrunkardsWalkBuilder {
 
         // Generate map noise
         self.noise_areas = generate_voronoi_spawn_regions(&self.map, &mut rng);
+    }
+}
+
+/// Digger that staggers around the map, creating open areas.
+pub struct DrunkDigger {
+    // Digger's current x position
+    pub x: i32,
+    // Diggers current y position
+    pub y: i32,
+    // Current (x, y) in the map index (1D array indexing from 2D index)
+    idx: usize,
+    // If the digger has actually dug any wall tiles out
+    pub did_something: bool,
+    settings: DrunkardSettings,
+}
+
+impl Digger for DrunkDigger {
+    fn get_position(&self) -> (i32, i32) {
+        (self.x, self.y)
+    }
+
+    fn get_position_mut(&mut self) -> (&mut i32, &mut i32) {
+        (&mut self.x, &mut self.y)
+    }
+
+    fn set_position(&mut self, x: i32, y: i32) {
+        self.x = x;
+        self.y = y;
+    }
+
+    /// Moves the drunk around the map one tile at a time in a random direction
+    /// until they've run out of life.
+    ///
+    /// Uses [`TileType::DownStairs`] as a marker to differentiate tiles dug by the
+    /// digger (the [`TileType::DownStairs`] tiles) from tiles that were already
+    /// floor tiles; keeps us from having to add another TileType enum variant,
+    /// which could possibly break exhaustion on TileType match statements.
+    /// These will be turned into floor tiles during the `build` loop.
+    fn stagger(&mut self, map: &mut Map, rng: &mut RandomNumberGenerator) -> (i32, i32) {
+        let mut prev_position: (i32, i32) = self.get_position();
+        while self.settings.lifespan > 0 {
+            self.idx = map.xy_idx(self.x, self.y);
+            // If they've landed on a wall tile, dig it out
+            if map.tiles[self.idx] == TileType::Wall {
+                self.did_something = true;
+            }
+            paint(
+                map,
+                self.settings.symmetry,
+                self.settings.brush_size,
+                self.x,
+                self.y,
+            );
+            // Mark the tiles dug by the digger
+            map.tiles[self.idx] = TileType::DownStairs;
+            prev_position = self.get_position();
+            // Get its position for the next iteration and reduce its remaining life
+            self.stagger_direction(map, rng);
+            self.settings.lifespan -= 1;
+        }
+        prev_position
+    }
+}
+
+impl DrunkDigger {
+    /// Creates and returns a new [`DrunkDigger`].
+    pub fn new(x: i32, y: i32, settings: DrunkardSettings) -> DrunkDigger {
+        DrunkDigger {
+            x: x,
+            y: y,
+            idx: usize::default(),
+            did_something: false,
+            settings: settings,
+        }
     }
 }

@@ -125,93 +125,38 @@ pub fn generate_voronoi_spawn_regions(
     noise_areas
 }
 
-/// Digger that staggers around the map, creating open areas.
-pub struct DrunkDigger<'a> {
-    // Digger's current x position
-    pub x: i32,
-    // Diggers current y position
-    pub y: i32,
-    // If the digger has actually dug any wall tiles out
-    pub did_something: bool,
-    // How long the drunk will stagger for
-    // pub life: i32,
-    rng: &'a mut rltk::RandomNumberGenerator,
-    // Current (x, y) in the map index (1D array indexing from 2D index)
-    idx: usize,
-}
-
-impl<'a> DrunkDigger<'a> {
-    /// Creates and returns a new [`DrunkDigger`].
-    pub fn new(x: i32, y: i32, rng: &mut rltk::RandomNumberGenerator) -> DrunkDigger {
-        DrunkDigger {
-            x: x,
-            y: y,
-            did_something: false,
-            // life: life,
-            rng: rng,
-            idx: usize::default(),
-        }
-    }
-
-    /// Moves the drunk around the map one tile at a time in a random direction
-    /// until they've run out of life.
-    ///
-    /// Uses [`TileType::DownStairs`] as a marker to differentiate tiles dug by the
-    /// digger (the [`TileType::DownStairs`] tiles) from tiles that were already
-    /// floor tiles; keeps us from having to add another TileType enum variant,
-    /// which could possibly break exhaustion on TileType match statements.
-    /// These will be turned into floor tiles during the `build` loop.
-    pub fn stagger_lifetime(&mut self, map: &mut Map, life: i32) {
-        let mut life = life;
-        while life > 0 {
-            self.idx = map.xy_idx(self.x, self.y);
-            // If they've landed on a wall tile, dig it out
-            if map.tiles[self.idx] == TileType::Wall {
-                self.did_something = true;
-            }
-            // Mark the tiles dug by the digger
-            map.tiles[self.idx] = TileType::DownStairs;
-            // Get its position for the next iteration and reduce its remaining life
-            self.stagger_direction(map);
-            life -= 1;
-        }
-    }
-
-    pub fn stagger_tiles(&mut self, map: &mut Map, tile_type: TileType) -> (i32, i32) {
-        let mut prev_pos: (i32, i32) = (self.x, self.y);
-        while map.tiles[self.idx] == tile_type {
-            prev_pos = (self.x, self.y);
-            self.stagger_direction(map);
-            self.idx = map.xy_idx(self.x, self.y);
-        }
-        prev_pos
-    }
+pub trait Digger {
+    fn get_position(&self) -> (i32, i32);
+    fn get_position_mut(&mut self) -> (&mut i32, &mut i32);
+    fn set_position(&mut self, x: i32, y: i32);
+    fn stagger(&mut self, map: &mut Map, rng: &mut rltk::RandomNumberGenerator) -> (i32, i32);
 
     /// Randomly generates the digger's new position, and moves them to it.
     /// Moves one tile (at most) in one of the four cardinal directions.
-    fn stagger_direction(&mut self, map: &Map) {
+    fn stagger_direction(&mut self, map: &Map, rng: &mut rltk::RandomNumberGenerator) {
+        let (x, y): (&mut i32, &mut i32) = self.get_position_mut();
         // Roll dice to pick a direction to move, then update the digger's
         // position based on said roll. If movement would take the digger
         // outside the map bounds, do nothing instead.
-        match self.rng.roll_dice(1, 4) {
+        match rng.roll_dice(1, 4) {
             1 => {
-                if self.x > 2 {
-                    self.x -= 1
+                if *x > 2 {
+                    *x -= 1
                 }
             }
             2 => {
-                if self.x < map.width - 2 {
-                    self.x += 1;
+                if *x < map.width - 2 {
+                    *x += 1;
                 }
             }
             3 => {
-                if self.y > 2 {
-                    self.y -= 1;
+                if *y > 2 {
+                    *y -= 1;
                 }
             }
             _ => {
-                if self.y < map.height - 2 {
-                    self.y += 1;
+                if *y < map.height - 2 {
+                    *y += 1;
                 }
             }
         };

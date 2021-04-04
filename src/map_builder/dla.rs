@@ -8,7 +8,7 @@ use rltk::RandomNumberGenerator;
 
 use crate::{spawner, Map, MapBuilder, Position, TileType, SHOW_MAPGEN_VISUALIZER};
 
-use super::common::{paint, DrunkDigger, Symmetry};
+use super::common::{paint, Digger, Symmetry};
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum DLAAlgorithm {
@@ -164,13 +164,13 @@ impl DLABuilder {
     fn walk_inwards(&mut self, desired_floor_tiles: usize, rng: &mut RandomNumberGenerator) {
         let mut floor_tile_count = self.map.count_floor_tiles();
         while floor_tile_count < desired_floor_tiles {
-            let mut drunk = DrunkDigger::new(
+            let mut drunk = TileDigger::new(
                 rng.roll_dice(1, self.map.width - 3) + 1,
                 rng.roll_dice(1, self.map.height - 3) + 1,
-                rng,
+                TileType::Wall,
             );
 
-            let (prev_x, prev_y) = drunk.stagger_tiles(&mut self.map, TileType::Wall);
+            let (prev_x, prev_y) = drunk.stagger(&mut self.map, rng);
             paint(
                 &mut self.map,
                 self.symmetry,
@@ -184,10 +184,14 @@ impl DLABuilder {
 
     fn walk_outwards(&mut self, desired_floor_tiles: usize, rng: &mut RandomNumberGenerator) {
         let mut floor_tile_count = self.map.count_floor_tiles();
-        let mut drunk = DrunkDigger::new(self.starting_position.x, self.starting_position.y, rng);
+        let mut drunk = TileDigger::new(
+            self.starting_position.x,
+            self.starting_position.y,
+            TileType::Floor,
+        );
 
         while floor_tile_count < desired_floor_tiles {
-            drunk.stagger_tiles(&mut self.map, TileType::Floor);
+            drunk.stagger(&mut self.map, rng);
             floor_tile_count = self.map.count_floor_tiles();
         }
 
@@ -245,5 +249,63 @@ impl Distribution<DLAAlgorithm> for Standard {
             1 => DLAAlgorithm::WalkOutwards,
             _ => DLAAlgorithm::CentralAttractor,
         }
+    }
+}
+
+/// Digger that staggers around the map, creating open areas.
+pub struct TileDigger {
+    // Digger's current x position
+    pub x: i32,
+    // Diggers current y position
+    pub y: i32,
+    // Floor for [`walk_outwards()`], Wall for [`walk_inwards()`]
+    tile_type: TileType,
+    // Current (x, y) in the map index (1D array indexing from 2D index)
+    idx: usize,
+}
+
+impl TileDigger {
+    /// Creates and returns a new [`DrunkDigger`].
+    pub fn new(x: i32, y: i32, tile_type: TileType) -> TileDigger {
+        TileDigger {
+            x: x,
+            y: y,
+            // life: life,
+            tile_type: tile_type,
+            idx: usize::default(),
+        }
+    }
+}
+
+impl Digger for TileDigger {
+    fn get_position(&self) -> (i32, i32) {
+        (self.x, self.y)
+    }
+
+    fn get_position_mut(&mut self) -> (&mut i32, &mut i32) {
+        (&mut self.x, &mut self.y)
+    }
+
+    fn set_position(&mut self, x: i32, y: i32) {
+        self.x = x;
+        self.y = y;
+    }
+
+    /// Moves the digger around the map one tile at a time in a random direction
+    /// until they've run out of life.
+    ///
+    /// Uses [`TileType::DownStairs`] as a marker to differentiate tiles dug by the
+    /// digger (the [`TileType::DownStairs`] tiles) from tiles that were already
+    /// floor tiles; keeps us from having to add another TileType enum variant,
+    /// which could possibly break exhaustion on TileType match statements.
+    /// These will be turned into floor tiles during the `build` loop.
+    fn stagger(&mut self, map: &mut Map, rng: &mut rltk::RandomNumberGenerator) -> (i32, i32) {
+        let mut prev_pos: (i32, i32) = (self.x, self.y);
+        while map.tiles[self.idx] == self.tile_type {
+            prev_pos = (self.x, self.y);
+            self.stagger_direction(map, rng);
+            self.idx = map.xy_idx(self.x, self.y);
+        }
+        prev_pos
     }
 }
