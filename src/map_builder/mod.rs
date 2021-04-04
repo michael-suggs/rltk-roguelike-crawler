@@ -19,6 +19,7 @@ mod dla;
 mod drunkard;
 mod maze;
 mod simple_map;
+mod voronoi;
 
 /// Basic functionality all [`MapBuilder`] implementors must have.
 pub trait MapBuilder {
