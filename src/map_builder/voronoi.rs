@@ -1,6 +1,8 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use crate::{spawner, Map, MapBuilder, Position, TileType, SHOW_MAPGEN_VISUALIZER};
+use crate::{
+    spawner, Map, MapBuilder, Position, TileType, MAPHEIGHT, MAPWIDTH, SHOW_MAPGEN_VISUALIZER,
+};
 
 pub struct VoronoiBuilder {
     map: Map,
@@ -8,7 +10,7 @@ pub struct VoronoiBuilder {
     depth: i32,
     history: Vec<Map>,
     noise_areas: HashMap<i32, Vec<usize>>,
-    voronoi_diagram: Option<VoronoiDiagram>,
+    diagram: VoronoiDiagram,
 }
 
 impl MapBuilder for VoronoiBuilder {
@@ -45,41 +47,28 @@ impl MapBuilder for VoronoiBuilder {
 
 impl VoronoiBuilder {
     pub fn new(new_depth: i32) -> VoronoiBuilder {
-        let builder = VoronoiBuilder {
+        VoronoiBuilder {
             map: Map::new(new_depth),
             starting_position: Position { x: 0, y: 0 },
             depth: new_depth,
             history: Vec::new(),
             noise_areas: HashMap::new(),
-            voronoi_diagram: None,
-        };
-        let vd_ptr = &builder.voronoi_diagram;
-        let vd = Some(VoronoiDiagram::new(
-            builder.map.width.clone(),
-            builder.map.height.clone(),
-            Box::new(|x: i32, y: i32| Map::xy_idx(&builder.map, x, y)),
-        ));
-        *vd_ptr = vd;
-        builder
+            diagram: VoronoiDiagram::new(MAPWIDTH as i32, MAPHEIGHT as i32),
+        }
     }
 
     pub fn build(&mut self) {
-        match self.voronoi_diagram {
-            Some(vd) => {
-                for y in 1..self.map.height - 1 {
-                    for x in 1..self.map.width - 1 {
-                        let idx = self.map.xy_idx(x, y);
-                        let seed = vd.membership[idx];
-                        let neighbors = vd.neighbors(x, y, seed);
+        for y in 1..self.map.height - 1 {
+            for x in 1..self.map.width - 1 {
+                let idx = self.map.xy_idx(x, y);
+                let seed = self.diagram.membership[idx];
+                let neighbors = self.diagram.neighbors(x, y, seed);
 
-                        if neighbors < 2 {
-                            self.map.tiles[idx] = TileType::Floor;
-                        }
-                    }
-                    self.take_snapshot();
+                if neighbors < 2 {
+                    self.map.tiles[idx] = TileType::Floor;
                 }
             }
-            None => panic!("Could not create VoronoiDiagram for builder"),
+            self.take_snapshot();
         }
     }
 }
@@ -90,18 +79,16 @@ struct VoronoiDiagram {
     seeds: Vec<(usize, rltk::Point)>,
     width: i32,
     height: i32,
-    xy_idx: Box<dyn Fn(i32, i32) -> usize>,
 }
 
 impl VoronoiDiagram {
-    pub fn new(width: i32, height: i32, xy_idx: Box<dyn Fn(i32, i32) -> usize>) -> VoronoiDiagram {
+    pub fn new(width: i32, height: i32) -> VoronoiDiagram {
         let mut vd = VoronoiDiagram {
             membership: vec![0; (width * height) as usize],
             rng: rltk::RandomNumberGenerator::new(),
             seeds: Vec::new(),
             width: width,
             height: height,
-            xy_idx: xy_idx,
         };
         vd.populate_seeds(64);
         vd.determine_membership(64);
@@ -112,7 +99,7 @@ impl VoronoiDiagram {
         while self.seeds.len() < n_seeds {
             let vx = self.rng.roll_dice(1, self.width - 1);
             let vy = self.rng.roll_dice(1, self.height - 1);
-            let vidx = (self.xy_idx)(vx, vy);
+            let vidx = self.xy_idx(vx, vy);
 
             let candidate = (vidx, rltk::Point::new(vx, vy));
             if !self.seeds.contains(&candidate) {
@@ -142,19 +129,23 @@ impl VoronoiDiagram {
     fn neighbors(&self, x: i32, y: i32, seed: i32) -> i32 {
         let mut neighbors = 0;
 
-        if self.membership[(self.xy_idx)(x - 1, y)] != seed {
+        if self.membership[self.xy_idx(x - 1, y)] != seed {
             neighbors += 1;
         }
-        if self.membership[(self.xy_idx)(x + 1, y)] != seed {
+        if self.membership[self.xy_idx(x + 1, y)] != seed {
             neighbors += 1;
         }
-        if self.membership[(self.xy_idx)(x, y - 1)] != seed {
+        if self.membership[self.xy_idx(x, y - 1)] != seed {
             neighbors += 1;
         }
-        if self.membership[(self.xy_idx)(x, y + 1)] != seed {
+        if self.membership[self.xy_idx(x, y + 1)] != seed {
             neighbors += 1;
         }
 
         neighbors
+    }
+
+    fn xy_idx(&self, x: i32, y: i32) -> usize {
+        (y as usize * self.width as usize) + x as usize
     }
 }
