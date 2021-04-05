@@ -1,8 +1,29 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
 use crate::{
     spawner, Map, MapBuilder, Position, TileType, MAPHEIGHT, MAPWIDTH, SHOW_MAPGEN_VISUALIZER,
 };
+
+#[derive(PartialEq, Clone, Copy)]
+pub enum DistanceAlgorithm {
+    Pythagoras,
+    Manhattan,
+    Chebyshev,
+}
+
+fn match_distance_algorithm(alg: DistanceAlgorithm) -> fn(rltk::Point, rltk::Point) -> f32 {
+    match alg {
+        DistanceAlgorithm::Pythagoras => |start: rltk::Point, end: rltk::Point| {
+            rltk::DistanceAlg::PythagorasSquared.distance2d(start, end)
+        },
+        DistanceAlgorithm::Manhattan => |start: rltk::Point, end: rltk::Point| {
+            rltk::DistanceAlg::Manhattan.distance2d(start, end)
+        },
+        DistanceAlgorithm::Chebyshev => |start: rltk::Point, end: rltk::Point| {
+            rltk::DistanceAlg::Chebyshev.distance2d(start, end)
+        },
+    }
+}
 
 pub struct VoronoiBuilder {
     map: Map,
@@ -53,7 +74,11 @@ impl VoronoiBuilder {
             depth: new_depth,
             history: Vec::new(),
             noise_areas: HashMap::new(),
-            diagram: VoronoiDiagram::new(MAPWIDTH as i32, MAPHEIGHT as i32),
+            diagram: VoronoiDiagram::new(
+                MAPWIDTH as i32,
+                MAPHEIGHT as i32,
+                DistanceAlgorithm::Pythagoras,
+            ),
         }
     }
 
@@ -79,16 +104,18 @@ struct VoronoiDiagram {
     seeds: Vec<(usize, rltk::Point)>,
     width: i32,
     height: i32,
+    distance: fn(rltk::Point, rltk::Point) -> f32,
 }
 
 impl VoronoiDiagram {
-    pub fn new(width: i32, height: i32) -> VoronoiDiagram {
+    pub fn new(width: i32, height: i32, distance_algorithm: DistanceAlgorithm) -> VoronoiDiagram {
         let mut vd = VoronoiDiagram {
             membership: vec![0; (width * height) as usize],
             rng: rltk::RandomNumberGenerator::new(),
             seeds: Vec::new(),
-            width: width,
-            height: height,
+            width,
+            height,
+            distance: match_distance_algorithm(distance_algorithm),
         };
         vd.populate_seeds(64);
         vd.determine_membership(64);
@@ -109,16 +136,14 @@ impl VoronoiDiagram {
     }
 
     fn determine_membership(&mut self, n_seeds: usize) {
+        let distance = self.distance;
         let mut vdistance = vec![(0, 0.0f32); n_seeds];
         for (i, vid) in self.membership.iter_mut().enumerate() {
             let x = i as i32 % self.width;
             let y = i as i32 / self.width;
 
             self.seeds.iter().enumerate().for_each(|(seed, pos)| {
-                vdistance[seed] = (
-                    seed,
-                    rltk::DistanceAlg::PythagorasSquared.distance2d(rltk::Point::new(x, y), pos.1),
-                )
+                vdistance[seed] = (seed, (distance)(rltk::Point::new(x, y), pos.1))
             });
 
             vdistance.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
