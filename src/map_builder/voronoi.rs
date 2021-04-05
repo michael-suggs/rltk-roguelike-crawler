@@ -67,19 +67,27 @@ impl MapBuilder for VoronoiBuilder {
 }
 
 impl VoronoiBuilder {
-    pub fn new(new_depth: i32) -> VoronoiBuilder {
+    fn new(new_depth: i32, distance_algorithm: DistanceAlgorithm) -> VoronoiBuilder {
         VoronoiBuilder {
             map: Map::new(new_depth),
             starting_position: Position { x: 0, y: 0 },
             depth: new_depth,
             history: Vec::new(),
             noise_areas: HashMap::new(),
-            diagram: VoronoiDiagram::new(
-                MAPWIDTH as i32,
-                MAPHEIGHT as i32,
-                DistanceAlgorithm::Pythagoras,
-            ),
+            diagram: VoronoiDiagram::new(MAPWIDTH as i32, MAPHEIGHT as i32, distance_algorithm),
         }
+    }
+
+    pub fn pythagoras(new_depth: i32) -> VoronoiBuilder {
+        VoronoiBuilder::new(new_depth, DistanceAlgorithm::Pythagoras)
+    }
+
+    pub fn manhattan(new_depth: i32) -> VoronoiBuilder {
+        VoronoiBuilder::new(new_depth, DistanceAlgorithm::Manhattan)
+    }
+
+    pub fn chebyshev(new_depth: i32) -> VoronoiBuilder {
+        VoronoiBuilder::new(new_depth, DistanceAlgorithm::Chebyshev)
     }
 
     pub fn build(&mut self) {
