@@ -4,6 +4,7 @@ use crate::{
     spawner, Map, MapBuilder, Position, TileType, MAPHEIGHT, MAPWIDTH, SHOW_MAPGEN_VISUALIZER,
 };
 
+/// Implemented distance algorithm function definitions.
 #[derive(PartialEq, Clone, Copy)]
 pub enum DistanceAlgorithm {
     Pythagoras,
@@ -11,20 +12,25 @@ pub enum DistanceAlgorithm {
     Chebyshev,
 }
 
-fn match_distance_algorithm(alg: DistanceAlgorithm) -> fn(rltk::Point, rltk::Point) -> f32 {
-    match alg {
-        DistanceAlgorithm::Pythagoras => |start: rltk::Point, end: rltk::Point| {
-            rltk::DistanceAlg::PythagorasSquared.distance2d(start, end)
-        },
-        DistanceAlgorithm::Manhattan => |start: rltk::Point, end: rltk::Point| {
-            rltk::DistanceAlg::Manhattan.distance2d(start, end)
-        },
-        DistanceAlgorithm::Chebyshev => |start: rltk::Point, end: rltk::Point| {
-            rltk::DistanceAlg::Chebyshev.distance2d(start, end)
-        },
+impl DistanceAlgorithm {
+    /// Returns the [`rltk::DistanceAlg`] function indicated by the specified
+    /// enum variant.
+    fn get_func(&self) -> fn(rltk::Point, rltk::Point) -> f32 {
+        match *self {
+            DistanceAlgorithm::Pythagoras => |start: rltk::Point, end: rltk::Point| {
+                rltk::DistanceAlg::PythagorasSquared.distance2d(start, end)
+            },
+            DistanceAlgorithm::Manhattan => |start: rltk::Point, end: rltk::Point| {
+                rltk::DistanceAlg::Manhattan.distance2d(start, end)
+            },
+            DistanceAlgorithm::Chebyshev => |start: rltk::Point, end: rltk::Point| {
+                rltk::DistanceAlg::Chebyshev.distance2d(start, end)
+            },
+        }
     }
 }
 
+/// Builer to construct a map by way of voronoi diagrams.
 pub struct VoronoiBuilder {
     map: Map,
     starting_position: Position,
@@ -78,14 +84,20 @@ impl VoronoiBuilder {
         }
     }
 
+    /// Constructs a new [`VoronoiBuilder`] using the distance algorithm
+    /// [`rltk::DistanceAlg::Pythagoras`].
     pub fn pythagoras(new_depth: i32) -> VoronoiBuilder {
         VoronoiBuilder::new(new_depth, DistanceAlgorithm::Pythagoras)
     }
 
+    /// Constructs a new [`VoronoiBuilder`] using the distance algorithm
+    /// [`rltk::DistanceAlg::Manhattan`].
     pub fn manhattan(new_depth: i32) -> VoronoiBuilder {
         VoronoiBuilder::new(new_depth, DistanceAlgorithm::Manhattan)
     }
 
+    /// Constructs a new [`VoronoiBuilder`] using the distance algorithm
+    /// [`rltk::DistanceAlg::Chebyshev`].
     pub fn chebyshev(new_depth: i32) -> VoronoiBuilder {
         VoronoiBuilder::new(new_depth, DistanceAlgorithm::Chebyshev)
     }
@@ -106,6 +118,7 @@ impl VoronoiBuilder {
     }
 }
 
+/// Handles seeding, membership, and neighboring.
 struct VoronoiDiagram {
     pub membership: Vec<i32>,
     rng: rltk::RandomNumberGenerator,
@@ -116,6 +129,8 @@ struct VoronoiDiagram {
 }
 
 impl VoronoiDiagram {
+    /// Constructs a new seeded VoronoiDiagram with distance and
+    /// membership calculated.
     pub fn new(width: i32, height: i32, distance_algorithm: DistanceAlgorithm) -> VoronoiDiagram {
         let mut vd = VoronoiDiagram {
             membership: vec![0; (width * height) as usize],
@@ -123,13 +138,14 @@ impl VoronoiDiagram {
             seeds: Vec::new(),
             width,
             height,
-            distance: match_distance_algorithm(distance_algorithm),
+            distance: DistanceAlgorithm::get_func(&distance_algorithm),
         };
         vd.populate_seeds(64);
         vd.determine_membership(64);
         vd
     }
 
+    /// Generates `n_seeds` random seeds within the specified dimensions.
     fn populate_seeds(&mut self, n_seeds: usize) {
         while self.seeds.len() < n_seeds {
             let vx = self.rng.roll_dice(1, self.width - 1);
