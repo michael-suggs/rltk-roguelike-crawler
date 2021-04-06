@@ -135,19 +135,7 @@ impl Solver {
         if neighbors == 0 {
             let new_chunk_idx = (rng.roll_dice(1, self.constraints.len() as i32) - 1) as usize;
             self.chunks[chunk_idx] = Some(new_chunk_idx);
-            let lx = chunk_x as i32 * self.chunk_size;
-            let rx = (chunk_x + 1) as i32 * self.chunk_size;
-            let ty = chunk_y as i32 * self.chunk_size;
-            let by = (chunk_y + 1) as i32 * self.chunk_size;
-
-            let mut i: usize = 0;
-            for y in ty..by {
-                for x in lx..rx {
-                    let map_idx = map.xy_idx(x, y);
-                    map.tiles[map_idx] = self.constraints[new_chunk_idx].pattern[i];
-                    i += 1;
-                }
-            }
+            self.apply_constraints_to_map(map, chunk_x, chunk_y, new_chunk_idx);
         } else {
             let mut to_check: HashSet<usize> = HashSet::new();
             for option in options.iter() {
@@ -171,11 +159,28 @@ impl Solver {
                 let new_chunk_idx = match possible_options.len() {
                     1 => 0,
                     _ => rng.roll_dice(1, possible_options.len() as i32) - 1,
-                };
-                self.chunks[chunk_idx]
+                } as usize;
+                self.chunks[chunk_idx] = Some(new_chunk_idx);
+                self.apply_constraints_to_map(map, chunk_x, chunk_y, new_chunk_idx);
             }
         }
 
         false
+    }
+
+    fn apply_constraints_to_map(&self, map: &mut Map, chunk_x: usize, chunk_y: usize, new_chunk_idx: usize) {
+        let lx = chunk_x as i32 * self.chunk_size;
+        let rx = (chunk_x + 1) as i32 * self.chunk_size;
+        let ty = chunk_y as i32 * self.chunk_size;
+        let by = (chunk_y + 1) as i32 * self.chunk_size;
+
+        let mut i: usize = 0;
+        for y in ty..by {
+            for x in lx..rx {
+                let map_idx = map.xy_idx(x, y);
+                map.tiles[map_idx] = self.constraints[new_chunk_idx].pattern[i];
+                i += 1;
+            }
+        }
     }
 }
