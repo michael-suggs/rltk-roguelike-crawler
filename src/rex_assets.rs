@@ -26,7 +26,8 @@ impl RexAssets {
 }
 
 #[allow(dead_code)]
-pub fn load_rex_map(map: &mut Map, path: &str) {
+pub fn load_rex_map(map: &mut Map, path: &str) -> Vec<(usize, String)> {
+    let spawns: Vec<(usize, String)> = Vec::new();
     let xp_file = XpFile::from_resource(path).unwrap();
 
     for layer in &xp_file.layers {
@@ -38,10 +39,39 @@ pub fn load_rex_map(map: &mut Map, path: &str) {
                     match (cell.ch as u8) as char {
                         ' ' => map.tiles[idx] = TileType::Floor,
                         '#' => map.tiles[idx] = TileType::Wall,
-                        _ => {}
+                        '@' => {
+                            map.tiles[idx] = TileType::Floor;
+                        }
+                        '>' => self.map.tiles[idx] = TileType::DownStairs,
+                        'g' => {
+                            map.tiles[idx] = TileType::Floor;
+                            spawns.push((idx, "Goblin".to_string()));
+                        }
+                        'o' => {
+                            map.tiles[idx] = TileType::Floor;
+                            spawns.push((idx, "Orc".to_string()));
+                        }
+                        '^' => {
+                            map.tiles[idx] = TileType::Floor;
+                            spawns.push((idx, "Bear Trap".to_string()));
+                        }
+                        '%' => {
+                            map.tiles[idx] = TileType::Floor;
+                            spawns.push((idx, "Rations".to_string()));
+                        }
+                        '!' => {
+                            map.tiles[idx] = TileType::Floor;
+                            spawns.push((idx, "Health Potion".to_string()));
+                        }
+                        _ => rltk::console::log(format!(
+                            "Unknown glyph when loading map: {}",
+                            (cell.ch as u8) as char
+                        )),
                     }
                 }
             }
         }
     }
+
+    spawns
 }

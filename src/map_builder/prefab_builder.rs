@@ -80,6 +80,6 @@ impl PrefabBuilder {
     }
 
     fn load_rex_map(&mut self, path: &str) {
-        crate::rex_assets::load_rex_map(&mut self.map, path);
+        self.spawns = crate::rex_assets::load_rex_map(&mut self.map, path);
     }
 }
