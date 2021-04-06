@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use crate::{Map, Position, TileType};
 
-use super::common::{MapChunk, tile_idx_in_chunks};
+use super::common::{Direction, MapChunk, tile_idx_in_chunks};
 
 pub fn build_patterns(
     map: &Map,
@@ -39,15 +39,24 @@ pub fn build_patterns(
     patterns
 }
 
-pub fn render_pattern_to_map(map: &mut Map, pattern: &Vec<TileType>, chunk: Chunk) {
+pub fn render_pattern_to_map(map: &mut Map, map_chunk: &MapChunk, chunk: Chunk) {
     // println!("\nNEW PATTERN\n");
     let mut i = 0usize;
     for tile_pos in chunk.into_iter() {
         let idx = map.xy_idx(tile_pos.x + 1, tile_pos.y + 1);
         // println!("({} => {}) tile_pos: ({}, {})", i, idx, tile_pos.x, tile_pos.y);
-        map.tiles[idx] = pattern[i];
+        map.tiles[idx] = map_chunk.pattern[i];
         map.visible_tiles[idx] = true;
         i += 1;
+    }
+
+    for exit_direction in Direction::iterator() {
+        for (x, exit) in map_chunk.exits[exit_direction as usize].iter().enumerate() {
+            if *exit {
+                let map_idx = exit_direction.map_index(map, &chunk, x as i32);
+                map.tiles[map_idx] = TileType::DownStairs;
+            }
+        }
     }
 }
 
@@ -113,59 +122,26 @@ pub fn patterns_to_constraints(patterns: Vec<Vec<TileType>>, chunk_size: i32) ->
 }
 
 #[derive(Clone, Copy)]
-enum Direction {
-    North = 0,
-    South = 1,
-    West = 2,
-    East = 3,
-}
-
-impl Direction {
-    fn get_index(&self, chunk_size: i32, x: i32) -> usize {
-        match self {
-            Direction::North => tile_idx_in_chunks(chunk_size, x, 0),
-            Direction::South => tile_idx_in_chunks(chunk_size, x, chunk_size - 1),
-            Direction::West => tile_idx_in_chunks(chunk_size, 0, x),
-            Direction::East => tile_idx_in_chunks(chunk_size, chunk_size - 1, x),
-        }
-    }
-
-    fn opposite(&self) -> Direction {
-        match self {
-            Direction::North => Direction::South,
-            Direction::South => Direction::North,
-            Direction::West => Direction::East,
-            Direction::East => Direction::West,
-        }
-    }
-
-    fn get_indices(chunk_size: i32, x: i32) -> Vec<usize> {
-        Direction::iterator().map(|d| d.get_index(chunk_size, x)).collect::<Vec<usize>>()
-    }
-
-    fn iterator() -> impl Iterator<Item = Direction> {
-        [Direction::North, Direction::South, Direction::East, Direction::West].iter().copied()
-    }
-}
-
-#[derive(Clone, Copy)]
 pub struct Chunk {
+    pub size: i32,
     pub start: Position,
     pub end: Position,
 }
 
 impl Chunk {
-    pub fn new(chunk_size: i32, x: i32, y: i32) -> Chunk {
+    pub fn new(size: i32, x: i32, y: i32) -> Chunk {
         Chunk {
-            start: Position { x: x * chunk_size, y: y * chunk_size },
-            end: Position { x: (x + 1) * chunk_size, y: (y + 1) * chunk_size },
+            size,
+            start: Position { x: x * size, y: y * size },
+            end: Position { x: (x + 1) * size, y: (y + 1) * size },
         }
     }
 
-    pub fn presized(chunk_size: i32, start: Position) -> Chunk {
+    pub fn presized(size: i32, start: Position) -> Chunk {
         Chunk {
+            size,
             start,
-            end: Position { x: start.x + chunk_size, y: start.y + chunk_size },
+            end: Position { x: start.x + size, y: start.y + size },
         }
     }
 }

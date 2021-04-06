@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use constraints::build_patterns;
+use constraints::{build_patterns, patterns_to_constraints};
 
 use crate::{spawner, Map, MapBuilder, Position, TileType, SHOW_MAPGEN_VISUALIZER};
 
-use self::constraints::{Chunk, render_pattern_to_map};
+use self::{common::MapChunk, constraints::{Chunk, render_pattern_to_map}};
 
 use super::common::{
     generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant,
@@ -59,7 +59,7 @@ impl WaveformCollapseBuilder {
         WaveformCollapseBuilder {
             map: image_loader::load_rex_map(
                 new_depth,
-                &rltk::rex::XpFile::from_resource("../resources/wfc-demo1.xp").unwrap(),
+                &rltk::rex::XpFile::from_resource("../resources/wfc-demo2.xp").unwrap(),
             ),
             starting_position: Position { x: 0, y: 0 },
             depth: new_depth,
@@ -73,7 +73,8 @@ impl WaveformCollapseBuilder {
         let mut rng = rltk::RandomNumberGenerator::new();
 
         let patterns = build_patterns(&self.map, CHUNK_SIZE, true, true);
-        self.render_tile_gallery(&patterns, CHUNK_SIZE);
+        let constraints = patterns_to_constraints(patterns, CHUNK_SIZE);
+        self.render_tile_gallery(&constraints, CHUNK_SIZE);
 
         self.starting_position = Position::from(self.map.center());
         let mut start_idx = self
@@ -94,18 +95,15 @@ impl WaveformCollapseBuilder {
         self.noise_areas = generate_voronoi_spawn_regions(&self.map, &mut rng);
     }
 
-    fn render_tile_gallery(&mut self, patterns: &Vec<Vec<TileType>>, chunk_size: i32) {
+    fn render_tile_gallery(&mut self, constraints: &Vec<MapChunk>, chunk_size: i32) {
         self.map = Map::new(0);
         let mut ctr = 0;
         let mut x = 1;
         let mut y = 1;
-        let chunks_x = self.map.width / chunk_size;
-        let chunks_y = self.map.height / chunk_size;
 
-        while ctr < patterns.len() {
+        while ctr < constraints.len() {
             let chunk = Chunk::presized(chunk_size, Position { x, y });
-            println!("{} : New chunk at ({}, {})/({}, {}) => {:?} -> {:?}", ctr, x, y, chunks_x, chunks_y, chunk.start, chunk.end);
-            render_pattern_to_map(&mut self.map, &patterns[ctr], chunk);
+            render_pattern_to_map(&mut self.map, &constraints[ctr], chunk);
             self.take_snapshot();
 
             x += chunk_size + 1;
