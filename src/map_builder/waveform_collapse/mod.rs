@@ -10,6 +10,7 @@ use super::common::{
     generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant,
 };
 
+mod common;
 mod constraints;
 mod image_loader;
 
@@ -96,30 +97,30 @@ impl WaveformCollapseBuilder {
     fn render_tile_gallery(&mut self, patterns: &Vec<Vec<TileType>>, chunk_size: i32) {
         self.map = Map::new(0);
         let mut ctr = 0;
-        let mut x = 0;
-        let mut y = 0;
+        let mut x = 1;
+        let mut y = 1;
         let chunks_x = self.map.width / chunk_size;
         let chunks_y = self.map.height / chunk_size;
 
         while ctr < patterns.len() {
-            let chunk = Chunk::new(chunk_size, x, y);
+            let chunk = Chunk::presized(chunk_size, Position { x, y });
             println!("{} : New chunk at ({}, {})/({}, {}) => {:?} -> {:?}", ctr, x, y, chunks_x, chunks_y, chunk.start, chunk.end);
             render_pattern_to_map(&mut self.map, &patterns[ctr], chunk);
             self.take_snapshot();
 
-            x += 1;
-            if x >= chunks_x {
+            x += chunk_size + 1;
+            if x + chunk_size > self.map.width {
                 // Move to the next row
-                x = 0;
-                y += 1;
+                x = 1;
+                y += chunk_size + 1;
 
-                if y >= chunks_y {
+                if y + chunk_size > self.map.height {
                     // Move to the next page
                     self.take_snapshot();
                     self.map = Map::new(0);
 
-                    x = 0;
-                    y = 0;
+                    x = 1;
+                    y = 1;
                 }
             }
             ctr += 1;
