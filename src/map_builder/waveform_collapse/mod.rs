@@ -47,7 +47,7 @@ impl MapBuilder for WaveformCollapseBuilder {
     fn take_snapshot(&mut self) {
         if SHOW_MAPGEN_VISUALIZER {
             let mut snapshot: Map = self.map.clone();
-            snapshot.visible_tiles.iter_mut().for_each(|v| *v = true);
+            snapshot.revealed_tiles.iter_mut().for_each(|v| *v = true);
             self.history.push(snapshot);
         }
     }
@@ -96,8 +96,8 @@ impl WaveformCollapseBuilder {
     fn render_tile_gallery(&mut self, patterns: &Vec<Vec<TileType>>, chunk_size: i32) {
         self.map = Map::new(0);
         let mut ctr = 0;
-        let mut x = 1;
-        let mut y = 1;
+        let mut x = 0;
+        let mut y = 0;
         let chunks_x = self.map.width / chunk_size;
         let chunks_y = self.map.height / chunk_size;
 
@@ -105,11 +105,12 @@ impl WaveformCollapseBuilder {
             let chunk = Chunk::new(chunk_size, x, y);
             println!("{} : New chunk at ({}, {})/({}, {}) => {:?} -> {:?}", ctr, x, y, chunks_x, chunks_y, chunk.start, chunk.end);
             render_pattern_to_map(&mut self.map, &patterns[ctr], chunk);
+            self.take_snapshot();
 
             x += 1;
             if x >= chunks_x {
                 // Move to the next row
-                x = 1;
+                x = 0;
                 y += 1;
 
                 if y >= chunks_y {
@@ -117,8 +118,8 @@ impl WaveformCollapseBuilder {
                     self.take_snapshot();
                     self.map = Map::new(0);
 
-                    x = 1;
-                    y = 1;
+                    x = 0;
+                    y = 0;
                 }
             }
             ctr += 1;

@@ -16,6 +16,7 @@ pub fn build_patterns(
         for cx in 0..chunks_x {
             let mut pattern: BuildPattern = BuildPattern::new(Chunk::new(chunk_size, cx, cy));
             pattern.add_tiles(map);
+            patterns.push(pattern.pattern());
 
             if include_flipping {
                 patterns.push(pattern.flip_horizontal(map).pattern());
@@ -23,7 +24,6 @@ pub fn build_patterns(
                 patterns.push(pattern.flip_both(map).pattern());
             }
 
-            patterns.push(pattern.pattern());
         }
     }
 
@@ -60,8 +60,8 @@ impl Chunk {
     pub fn new(chunk_size: i32, x: i32, y: i32) -> Chunk {
         Chunk {
             size: chunk_size,
-            start: Position { x: x * chunk_size, y: y * chunk_size },
-            end: Position { x: (x + 1) * chunk_size, y: (y + 1) * chunk_size },
+            start: Position { x: (x * chunk_size) + 1, y: (y * chunk_size) + 1 },
+            end: Position { x: ((x + 1) * chunk_size) + 1, y: ((y + 1) * chunk_size) + 1 },
         }
     }
 }
@@ -107,11 +107,10 @@ impl BuildPattern {
         }
     }
 
-
     fn flip_horizontal(&self, map: &Map) -> BuildPattern {
         let mut flipped = BuildPattern::new(self.chunk);
-        for pos in self.chunk.into_iter() {
-            let idx = map.xy_idx(pos.x, pos.y);
+        for pos in flipped.chunk.into_iter() {
+            let idx = map.xy_idx(self.chunk.end.x - (pos.x + 1), pos.y);
             flipped.add_tile(map.tiles[idx]);
         }
         flipped
@@ -119,7 +118,7 @@ impl BuildPattern {
 
     fn flip_vertical(&self, map: &Map) -> BuildPattern {
         let mut flipped = BuildPattern::new(self.chunk);
-        for pos in self.chunk.into_iter() {
+        for pos in flipped.chunk.into_iter() {
             let idx = map.xy_idx(pos.x, self.chunk.end.y - (pos.y + 1));
             flipped.add_tile(map.tiles[idx]);
         }
@@ -128,7 +127,7 @@ impl BuildPattern {
 
     pub fn flip_both(&self, map: &Map) -> BuildPattern {
         let mut flipped = BuildPattern::new(self.chunk);
-        for pos in self.chunk.into_iter() {
+        for pos in flipped.chunk.into_iter() {
             let idx = map.xy_idx(self.chunk.end.x - (pos.x + 1), self.chunk.end.y - (pos.y + 1));
             flipped.add_tile(map.tiles[idx]);
         }
