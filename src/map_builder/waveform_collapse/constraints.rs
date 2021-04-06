@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use crate::{Map, Position, TileType};
 
-use super::common::{Direction, MapChunk, tile_idx_in_chunks};
+use super::common::{tile_idx_in_chunks, Direction, MapChunk};
 
 pub fn build_patterns(
     map: &Map,
@@ -25,7 +25,6 @@ pub fn build_patterns(
                 patterns.push(pattern.flip_vertical(map).pattern());
                 patterns.push(pattern.flip_both(map).pattern());
             }
-
         }
     }
 
@@ -75,7 +74,10 @@ pub fn patterns_to_constraints(patterns: Vec<Vec<TileType>>, chunk_size: i32) ->
 
         let mut n_exits = 0;
         for x in 0..chunk_size {
-            for (i, tile_idx) in Direction::get_indices(chunk_size, x).into_iter().enumerate() {
+            for (i, tile_idx) in Direction::get_indices(chunk_size, x)
+                .into_iter()
+                .enumerate()
+            {
                 if new_chunk.pattern[tile_idx] == TileType::Floor {
                     new_chunk.exits[i][x as usize] = true;
                     n_exits += 1;
@@ -94,7 +96,8 @@ pub fn patterns_to_constraints(patterns: Vec<Vec<TileType>>, chunk_size: i32) ->
                     compatible.push(j);
                 }
             } else {
-                for (direction, exit_list) in Direction::iterator().zip(constraint.exits.iter_mut()) {
+                for (direction, exit_list) in Direction::iterator().zip(constraint.exits.iter_mut())
+                {
                     let opposite = direction.opposite();
 
                     let mut it_fits = false;
@@ -108,10 +111,15 @@ pub fn patterns_to_constraints(patterns: Vec<Vec<TileType>>, chunk_size: i32) ->
                         }
                     }
 
-                    if it_fits { constraint.compatible_with[direction as usize].push(j) }
+                    if it_fits {
+                        constraint.compatible_with[direction as usize].push(j)
+                    }
 
                     if !has_any {
-                        constraint.compatible_with.iter_mut().for_each(|c| c.push(j));
+                        constraint
+                            .compatible_with
+                            .iter_mut()
+                            .for_each(|c| c.push(j));
                     }
                 }
             }
@@ -132,8 +140,14 @@ impl Chunk {
     pub fn new(size: i32, x: i32, y: i32) -> Chunk {
         Chunk {
             size,
-            start: Position { x: x * size, y: y * size },
-            end: Position { x: (x + 1) * size, y: (y + 1) * size },
+            start: Position {
+                x: x * size,
+                y: y * size,
+            },
+            end: Position {
+                x: (x + 1) * size,
+                y: (y + 1) * size,
+            },
         }
     }
 
@@ -141,7 +155,10 @@ impl Chunk {
         Chunk {
             size,
             start,
-            end: Position { x: start.x + size, y: start.y + size },
+            end: Position {
+                x: start.x + size,
+                y: start.y + size,
+            },
         }
     }
 }
@@ -168,7 +185,7 @@ impl BuildPattern {
     fn new(chunk: Chunk) -> BuildPattern {
         BuildPattern {
             tiles: Vec::new(),
-            chunk
+            chunk,
         }
     }
 
@@ -208,7 +225,10 @@ impl BuildPattern {
     pub fn flip_both(&self, map: &Map) -> BuildPattern {
         let mut flipped = BuildPattern::new(self.chunk);
         for pos in flipped.chunk.into_iter() {
-            let idx = map.xy_idx(self.chunk.end.x - (pos.x + 1), self.chunk.end.y - (pos.y + 1));
+            let idx = map.xy_idx(
+                self.chunk.end.x - (pos.x + 1),
+                self.chunk.end.y - (pos.y + 1),
+            );
             flipped.add_tile(map.tiles[idx]);
         }
         flipped

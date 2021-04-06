@@ -51,10 +51,19 @@ impl Direction {
     }
 
     pub fn get_indices(chunk_size: i32, x: i32) -> Vec<usize> {
-        Direction::iterator().map(|d| d.get_index(chunk_size, x)).collect::<Vec<usize>>()
+        Direction::iterator()
+            .map(|d| d.get_index(chunk_size, x))
+            .collect::<Vec<usize>>()
     }
 
     pub fn iterator() -> impl Iterator<Item = Direction> {
-        [Direction::North, Direction::South, Direction::East, Direction::West].iter().copied()
+        [
+            Direction::North,
+            Direction::South,
+            Direction::East,
+            Direction::West,
+        ]
+        .iter()
+        .copied()
     }
 }

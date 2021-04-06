@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use constraints::{build_patterns, patterns_to_constraints};
+use common::MapChunk;
+use constraints::{build_patterns, patterns_to_constraints, render_pattern_to_map, Chunk};
+use solver::Solver;
 
 use crate::{spawner, Map, MapBuilder, Position, TileType, SHOW_MAPGEN_VISUALIZER};
-
-use self::{common::MapChunk, constraints::{Chunk, render_pattern_to_map}};
 
 use super::common::{
     generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant,
@@ -84,7 +84,9 @@ impl WaveformCollapseBuilder {
                 self.take_snapshot();
             }
             self.take_snapshot();
-            if solver.possible { break; }
+            if solver.possible {
+                break;
+            }
         }
 
         self.starting_position = Position::from(self.map.center());
@@ -135,6 +137,5 @@ impl WaveformCollapseBuilder {
             ctr += 1;
         }
         self.take_snapshot();
-
     }
 }
