@@ -112,7 +112,8 @@ pub fn patterns_to_constraints(patterns: Vec<Vec<TileType>>, chunk_size: i32) ->
                     }
 
                     if !has_any {
-                        let matching_exit_count = potential.exits[opposite].iter().filter(|a| !**a).count();
+                        let matching_exit_count =
+                            potential.exits[opposite].iter().filter(|a| !**a).count();
                         if matching_exit_count == 0 {
                             constraint.compatible_with[direction as usize].push(j);
                         }

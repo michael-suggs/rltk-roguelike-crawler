@@ -17,7 +17,10 @@ mod image_loader;
 mod solver;
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum WaveformMode { TestMap, Derived }
+pub enum WaveformMode {
+    TestMap,
+    Derived,
+}
 
 pub struct WaveformCollapseBuilder {
     map: Map,
@@ -62,7 +65,11 @@ impl MapBuilder for WaveformCollapseBuilder {
 }
 
 impl WaveformCollapseBuilder {
-    pub fn new(new_depth: i32, mode: WaveformMode, derive_from: Option<Box<dyn MapBuilder>>) -> WaveformCollapseBuilder {
+    pub fn new(
+        new_depth: i32,
+        mode: WaveformMode,
+        derive_from: Option<Box<dyn MapBuilder>>,
+    ) -> WaveformCollapseBuilder {
         WaveformCollapseBuilder {
             map: image_loader::load_rex_map(
                 new_depth,
@@ -88,7 +95,10 @@ impl WaveformCollapseBuilder {
     fn build(&mut self) {
         match self.mode {
             WaveformMode::TestMap => {
-                self.map = load_rex_map(self.depth, &rltk::rex::XpFile::from_resource("../resources/wfc-demo2.xp").unwrap());
+                self.map = load_rex_map(
+                    self.depth,
+                    &rltk::rex::XpFile::from_resource("../resources/wfc-demo2.xp").unwrap(),
+                );
                 self.take_snapshot();
             }
             WaveformMode::Derived => {

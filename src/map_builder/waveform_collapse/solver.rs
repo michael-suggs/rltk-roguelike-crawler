@@ -103,7 +103,12 @@ impl Solver {
                     _ => rng.roll_dice(1, possible_options.len() as i32) - 1,
                 } as usize;
                 self.chunks[chunk_idx] = Some(possible_options[new_chunk_idx]);
-                self.apply_constraints_to_map(map, chunk_x, chunk_y, possible_options[new_chunk_idx]);
+                self.apply_constraints_to_map(
+                    map,
+                    chunk_x,
+                    chunk_y,
+                    possible_options[new_chunk_idx],
+                );
             }
         }
 

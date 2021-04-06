@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use specs::prelude::World;
 
 use bsp_dungeon::BspDungeonBuilder;
@@ -36,26 +38,26 @@ pub trait MapBuilder {
 
 /// Generates a new [`Map`] at a given depth using a random [`MapBuilder`].
 pub fn random_builder(new_depth: i32) -> Box<dyn MapBuilder> {
-    // let mut rng = rltk::RandomNumberGenerator::new();
-    // match rng.roll_dice(1, 18) {
-    //     1 => Box::new(BspDungeonBuilder::new(new_depth)),
-    //     2 => Box::new(BspInteriorBuilder::new(new_depth)),
-    //     3 => Box::new(CellularAutomataBuilder::new(new_depth)),
-    //     4 => Box::new(DrunkardsWalkBuilder::open_area(new_depth)),
-    //     5 => Box::new(DrunkardsWalkBuilder::open_halls(new_depth)),
-    //     6 => Box::new(DrunkardsWalkBuilder::winding_passages(new_depth)),
-    //     7 => Box::new(DrunkardsWalkBuilder::fat_passages(new_depth)),
-    //     8 => Box::new(DrunkardsWalkBuilder::fearful_symmetry(new_depth)),
-    //     9 => Box::new(MazeBuilder::new(new_depth)),
-    //     10 => Box::new(DLABuilder::new_walk_inwards(new_depth)),
-    //     11 => Box::new(DLABuilder::new_walk_outwards(new_depth)),
-    //     12 => Box::new(DLABuilder::new_central_attractor(new_depth)),
-    //     13 => Box::new(DLABuilder::new_insectoid(new_depth)),
-    //     14 => Box::new(DLABuilder::new_random(new_depth)),
-    //     15 => Box::new(VoronoiBuilder::pythagoras(new_depth)),
-    //     16 => Box::new(VoronoiBuilder::manhattan(new_depth)),
-    //     17 => Box::new(VoronoiBuilder::chebyshev(new_depth)),
-    //     _ => Box::new(SimpleMapBuilder::new(new_depth)),
-    // }
-    Box::new(WaveformCollapseBuilder::test_map(new_depth))
+    let mut rng = rltk::RandomNumberGenerator::new();
+    match rng.roll_dice(1, 18) {
+        1 => Box::new(BspDungeonBuilder::new(new_depth)),
+        2 => Box::new(BspInteriorBuilder::new(new_depth)),
+        3 => Box::new(CellularAutomataBuilder::new(new_depth)),
+        4 => Box::new(DrunkardsWalkBuilder::open_area(new_depth)),
+        5 => Box::new(DrunkardsWalkBuilder::open_halls(new_depth)),
+        6 => Box::new(DrunkardsWalkBuilder::winding_passages(new_depth)),
+        7 => Box::new(DrunkardsWalkBuilder::fat_passages(new_depth)),
+        8 => Box::new(DrunkardsWalkBuilder::fearful_symmetry(new_depth)),
+        9 => Box::new(MazeBuilder::new(new_depth)),
+        10 => Box::new(DLABuilder::new_walk_inwards(new_depth)),
+        11 => Box::new(DLABuilder::new_walk_outwards(new_depth)),
+        12 => Box::new(DLABuilder::new_central_attractor(new_depth)),
+        13 => Box::new(DLABuilder::new_insectoid(new_depth)),
+        14 => Box::new(DLABuilder::new_random(new_depth)),
+        15 => Box::new(VoronoiBuilder::pythagoras(new_depth)),
+        16 => Box::new(VoronoiBuilder::manhattan(new_depth)),
+        17 => Box::new(VoronoiBuilder::chebyshev(new_depth)),
+        _ => Box::new(SimpleMapBuilder::new(new_depth)),
+    }
+    // Box::new(WaveformCollapseBuilder::test_map(new_depth))
 }
