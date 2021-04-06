@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use constraints::build_patterns;
+
 use crate::{spawner, Map, MapBuilder, Position, TileType, SHOW_MAPGEN_VISUALIZER};
 
 use self::constraints::{Chunk, render_pattern_to_map};
@@ -69,6 +71,9 @@ impl WaveformCollapseBuilder {
         const CHUNK_SIZE: i32 = 7;
         let mut rng = rltk::RandomNumberGenerator::new();
 
+        let patterns = build_patterns(&self.map, CHUNK_SIZE, true, true);
+        self.render_tile_gallery(&patterns, CHUNK_SIZE);
+
         self.starting_position = Position::from(self.map.center());
         let mut start_idx = self
             .map
@@ -93,18 +98,21 @@ impl WaveformCollapseBuilder {
         let mut ctr = 0;
         let mut x = 1;
         let mut y = 1;
+        let chunks_x = self.map.width / chunk_size;
+        let chunks_y = self.map.height / chunk_size;
 
         while ctr < patterns.len() {
             let chunk = Chunk::new(chunk_size, x, y);
+            println!("{} : New chunk at ({}, {})/({}, {}) => {:?} -> {:?}", ctr, x, y, chunks_x, chunks_y, chunk.start, chunk.end);
             render_pattern_to_map(&mut self.map, &patterns[ctr], chunk);
 
-            x += chunk_size + 1;
-            if x + chunk_size > self.map.width {
+            x += 1;
+            if x >= chunks_x {
                 // Move to the next row
                 x = 1;
-                y += chunk_size + 1;
+                y += 1;
 
-                if y + chunk_size > self.map.height {
+                if y >= chunks_y {
                     // Move to the next page
                     self.take_snapshot();
                     self.map = Map::new(0);

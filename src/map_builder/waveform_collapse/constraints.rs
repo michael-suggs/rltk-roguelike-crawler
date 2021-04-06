@@ -38,9 +38,11 @@ pub fn build_patterns(
 }
 
 pub fn render_pattern_to_map(map: &mut Map, pattern: &Vec<TileType>, chunk: Chunk) {
+    // println!("\nNEW PATTERN\n");
     let mut i = 0usize;
     for tile_pos in chunk.into_iter() {
         let idx = map.xy_idx(tile_pos.x, tile_pos.y);
+        // println!("({} => {}) tile_pos: ({}, {})", i, idx, tile_pos.x, tile_pos.y);
         map.tiles[idx] = pattern[i];
         map.visible_tiles[idx] = true;
         i += 1;
@@ -50,8 +52,8 @@ pub fn render_pattern_to_map(map: &mut Map, pattern: &Vec<TileType>, chunk: Chun
 #[derive(Clone, Copy)]
 pub struct Chunk {
     size: i32,
-    start: Position,
-    end: Position,
+    pub start: Position,
+    pub end: Position,
 }
 
 impl Chunk {
@@ -90,6 +92,10 @@ impl BuildPattern {
         }
     }
 
+    fn pattern(&self) -> Vec<TileType> {
+        self.tiles.clone()
+    }
+
     fn add_tile(&mut self, tile: TileType) {
         self.tiles.push(tile);
     }
@@ -101,13 +107,10 @@ impl BuildPattern {
         }
     }
 
-    fn pattern(&self) -> Vec<TileType> {
-        self.tiles.clone()
-    }
 
     fn flip_horizontal(&self, map: &Map) -> BuildPattern {
         let mut flipped = BuildPattern::new(self.chunk);
-        for pos in self.chunk {
+        for pos in self.chunk.into_iter() {
             let idx = map.xy_idx(pos.x, pos.y);
             flipped.add_tile(map.tiles[idx]);
         }
@@ -116,13 +119,19 @@ impl BuildPattern {
 
     fn flip_vertical(&self, map: &Map) -> BuildPattern {
         let mut flipped = BuildPattern::new(self.chunk);
-        flipped.add_tiles(map);
+        for pos in self.chunk.into_iter() {
+            let idx = map.xy_idx(pos.x, self.chunk.end.y - (pos.y + 1));
+            flipped.add_tile(map.tiles[idx]);
+        }
         flipped
     }
 
     pub fn flip_both(&self, map: &Map) -> BuildPattern {
         let mut flipped = BuildPattern::new(self.chunk);
-        flipped.add_tiles(map);
+        for pos in self.chunk.into_iter() {
+            let idx = map.xy_idx(self.chunk.end.x - (pos.x + 1), self.chunk.end.y - (pos.y + 1));
+            flipped.add_tile(map.tiles[idx]);
+        }
         flipped
     }
 }
