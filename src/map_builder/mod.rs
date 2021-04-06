@@ -22,6 +22,7 @@ mod common;
 mod dla;
 mod drunkard;
 mod maze;
+mod prefab_builder;
 mod simple_map;
 mod voronoi;
 mod waveform_collapse;

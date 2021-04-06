@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use crate::{Map, Position, TileType};
 
-use super::common::{tile_idx_in_chunks, Direction, MapChunk};
+use super::common::{Direction, MapChunk};
 
 pub fn build_patterns(
     map: &Map,

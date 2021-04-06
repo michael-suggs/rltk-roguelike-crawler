@@ -134,7 +134,7 @@ impl WaveformCollapseBuilder {
         }
 
         self.starting_position = Position::from(self.map.center());
-        let mut start_idx = self
+        let start_idx = self
             .map
             .xy_idx(self.starting_position.x, self.starting_position.y);
         // while self.map.tiles[start_idx] != TileType::Floor {

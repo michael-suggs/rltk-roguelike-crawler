@@ -14,6 +14,12 @@ pub struct Position {
     pub y: i32,
 }
 
+impl Default for Position {
+    fn default() -> Position {
+        Position { x: 0, y: 0 }
+    }
+}
+
 impl From<Position> for (i32, i32) {
     fn from(p: Position) -> (i32, i32) {
         let Position { x, y } = p;
