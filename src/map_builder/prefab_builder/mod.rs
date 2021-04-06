@@ -2,6 +2,8 @@ use crate::{spawner, Map, MapBuilder, Position, TileType, SHOW_MAPGEN_VISUALIZER
 
 use super::common::remove_unreachable_areas_returning_most_distant;
 
+use prefab_sections::{HorizontalPlacement, VerticalPlacement};
+
 mod prefab_levels;
 mod prefab_sections;
 
@@ -152,17 +154,7 @@ impl PrefabBuilder {
     }
 
     fn load_ascii_map(&mut self, level: &prefab_levels::PrefabLevel) {
-        let mut string_vec: Vec<char> = level
-            .template
-            .chars()
-            .filter(|c| *c != '\r' && *c != '\n')
-            .collect();
-        string_vec.iter_mut().for_each(|c| {
-            if *c as u8 == 160u8 {
-                *c = ' '
-            }
-        });
-
+        let string_vec: Vec<char> = PrefabBuilder::read_ascii_to_vec(level.template);
         let mut i = 0;
         for y in 0..level.height {
             for x in 0..level.width {
@@ -173,5 +165,50 @@ impl PrefabBuilder {
                 i += 1;
             }
         }
+    }
+
+    fn apply_sectional(&mut self, section: &prefab_sections::PrefabSection) {
+        let prev_builder = self.previous_builder.as_mut().unwrap();
+        prev_builder.build_map();
+        self.starting_position = prev_builder.get_starting_position();
+        self.map = prev_builder.get_map().clone();
+        self.take_snapshot();
+
+        let string_vec = PrefabBuilder::read_ascii_to_vec(section.template);
+        let chunk_x = match section.placement.0 {
+            HorizontalPlacement::Left => 0,
+            HorizontalPlacement::Center => (self.map.width / 2) - (section.width as i32 / 2),
+            HorizontalPlacement::Right => (self.map.width - 1) - section.width as i32,
+        };
+        let chunk_y = match section.placement.1 {
+            VerticalPlacement::Top => 0,
+            VerticalPlacement::Center => (self.map.height / 2) - (section.height as i32 / 2),
+            VerticalPlacement::Bottom => (self.map.height - 1) - section.height as i32,
+        };
+
+        let mut i = 0;
+        for y in 0..section.height {
+            for x in 0..section.width {
+                if x < self.map.width as usize && y < self.map.height as usize {
+                    let idx = self.map.xy_idx(x as i32 + chunk_x, y as i32 + chunk_y);
+                    self.char_to_map(string_vec[i], idx);
+                }
+                i += 1;
+            }
+        }
+        self.take_snapshot();
+    }
+
+    fn read_ascii_to_vec(template: &str) -> Vec<char> {
+        let mut string_vec: Vec<char> = template
+            .chars()
+            .filter(|c| *c != '\r' && *c != '\n')
+            .collect();
+        string_vec.iter_mut().for_each(|c| {
+            if *c as u8 == 160u8 {
+                *c = ' '
+            }
+        });
+        string_vec
     }
 }
