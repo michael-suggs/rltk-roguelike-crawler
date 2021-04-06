@@ -3,12 +3,14 @@ use crate::{spawner, Map, MapBuilder, Position, TileType, SHOW_MAPGEN_VISUALIZER
 use super::common::remove_unreachable_areas_returning_most_distant;
 
 mod prefab_levels;
+mod prefab_sections;
 
 #[allow(dead_code)]
 #[derive(PartialEq, Clone)]
 pub enum PrefabMode {
     RexLevel { template: &'static str },
     Constant { level: prefab_levels::PrefabLevel },
+    Sectional { section: prefab_sections::PrefabSection },
 }
 
 pub struct PrefabBuilder {
@@ -18,6 +20,7 @@ pub struct PrefabBuilder {
     history: Vec<Map>,
     mode: PrefabMode,
     spawns: Vec<(usize, String)>,
+    previous_builder: Option<Box<dyn MapBuilder>>,
 }
 
 impl MapBuilder for PrefabBuilder {
@@ -53,7 +56,7 @@ impl MapBuilder for PrefabBuilder {
 }
 
 impl PrefabBuilder {
-    pub fn new(new_depth: i32) -> PrefabBuilder {
+    pub fn new(new_depth: i32, previous_builder: Option<Box<dyn MapBuilder>>) -> PrefabBuilder {
         PrefabBuilder {
             map: Map::new(new_depth),
             starting_position: Position::default(),
@@ -66,6 +69,7 @@ impl PrefabBuilder {
                 level: prefab_levels::WFC_POPULATED,
             },
             spawns: Vec::new(),
+            previous_builder
         }
     }
 
@@ -73,6 +77,7 @@ impl PrefabBuilder {
         match self.mode {
             PrefabMode::RexLevel { template } => self.load_rex_map(&template),
             PrefabMode::Constant { level } => self.load_ascii_map(&level),
+            PrefabMode::Sectional { section } => self.apply_sectional(&section),
         }
         self.take_snapshot();
 
