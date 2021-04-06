@@ -1,5 +1,7 @@
 use crate::{spawner, Map, MapBuilder, Position, TileType, SHOW_MAPGEN_VISUALIZER};
 
+use super::common::remove_unreachable_areas_returning_most_distant;
+
 #[allow(dead_code)]
 #[derive(PartialEq, Clone)]
 pub enum PrefabMode {
@@ -65,18 +67,28 @@ impl PrefabBuilder {
         match self.mode {
             PrefabMode::RexLevel { template } => self.load_rex_map(&template),
         }
+        self.take_snapshot();
 
-        self.starting_position = Position::from(self.map.center());
-        let mut start_idx = self
-            .map
-            .xy_idx(self.starting_position.x, self.starting_position.y);
-        while self.map.tiles[start_idx] != TileType::Floor {
-            self.starting_position.x -= 1;
-            start_idx = self
+        if self.starting_position.x == 0 {
+            self.starting_position = Position::from(self.map.center());
+
+            let mut start_idx = self
                 .map
                 .xy_idx(self.starting_position.x, self.starting_position.y);
+
+            while self.map.tiles[start_idx] != TileType::Floor {
+                self.starting_position.x -= 1;
+                start_idx = self
+                    .map
+                    .xy_idx(self.starting_position.x, self.starting_position.y);
+            }
+            self.take_snapshot();
+
+            let exit_tile = remove_unreachable_areas_returning_most_distant(&mut self.map, start_idx);
+            self.map.tiles[exit_tile] = TileType::DownStairs;
+            self.take_snapshot();
         }
-        self.take_snapshot();
+
     }
 
     fn load_rex_map(&mut self, path: &str) {
