@@ -105,7 +105,7 @@ pub fn spawn_region(ecs: &mut World, area: &[usize], map_depth: i32) {
     }
 }
 
-fn spawn_entity(ecs: &mut World, spawn: &(&usize, &String)) {
+pub fn spawn_entity(ecs: &mut World, spawn: &(&usize, &String)) {
     let (x, y) = ((*spawn.0 % MAPWIDTH) as i32, (*spawn.0 / MAPWIDTH) as i32);
     match spawn.1.as_ref() {
         "Goblin" => goblin(ecs, x, y),

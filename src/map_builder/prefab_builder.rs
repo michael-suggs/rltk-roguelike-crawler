@@ -1,9 +1,9 @@
-use crate::{Map, MapBuilder, Position, SHOW_MAPGEN_VISUALIZER};
+use crate::{spawner, Map, MapBuilder, Position, TileType, SHOW_MAPGEN_VISUALIZER};
 
 #[allow(dead_code)]
 #[derive(PartialEq, Clone)]
 pub enum PrefabMode {
-    RexLevel { template: &'static str }
+    RexLevel { template: &'static str },
 }
 
 pub struct PrefabBuilder {
@@ -12,6 +12,7 @@ pub struct PrefabBuilder {
     depth: i32,
     history: Vec<Map>,
     mode: PrefabMode,
+    spawns: Vec<(usize, String)>,
 }
 
 impl MapBuilder for PrefabBuilder {
@@ -20,7 +21,9 @@ impl MapBuilder for PrefabBuilder {
     }
 
     fn spawn_entities(&mut self, ecs: &mut specs::World) {
-        todo!()
+        for ent in self.spawns.iter() {
+            spawner::spawn_entity(ecs, &(&ent.0, &ent.1));
+        }
     }
 
     fn get_map(&self) -> Map {
@@ -51,12 +54,29 @@ impl PrefabBuilder {
             starting_position: Position::default(),
             depth: new_depth,
             history: Vec::new(),
-            mode: PrefabMode::RexLevel { template: "../resources/wfc-demo1.xp" }
+            mode: PrefabMode::RexLevel {
+                template: "../resources/wfc-populated.xp",
+            },
+            spawns: Vec::new(),
         }
     }
 
     fn build(&mut self) {
-        todo!()
+        match self.mode {
+            PrefabMode::RexLevel { template } => self.load_rex_map(&template),
+        }
+
+        self.starting_position = Position::from(self.map.center());
+        let mut start_idx = self
+            .map
+            .xy_idx(self.starting_position.x, self.starting_position.y);
+        while self.map.tiles[start_idx] != TileType::Floor {
+            self.starting_position.x -= 1;
+            start_idx = self
+                .map
+                .xy_idx(self.starting_position.x, self.starting_position.y);
+        }
+        self.take_snapshot();
     }
 
     fn load_rex_map(&mut self, path: &str) {

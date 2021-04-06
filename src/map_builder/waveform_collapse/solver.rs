@@ -1,7 +1,4 @@
-use std::{
-    borrow::BorrowMut,
-    collections::HashSet,
-};
+use std::{borrow::BorrowMut, collections::HashSet};
 
 use crate::Map;
 
