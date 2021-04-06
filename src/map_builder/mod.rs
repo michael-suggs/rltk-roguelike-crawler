@@ -57,5 +57,5 @@ pub fn random_builder(new_depth: i32) -> Box<dyn MapBuilder> {
     //     17 => Box::new(VoronoiBuilder::chebyshev(new_depth)),
     //     _ => Box::new(SimpleMapBuilder::new(new_depth)),
     // }
-    Box::new(WaveformCollapseBuilder::new(new_depth))
+    Box::new(WaveformCollapseBuilder::test_map(new_depth))
 }

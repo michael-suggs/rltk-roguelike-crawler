@@ -69,22 +69,19 @@ pub fn patterns_to_constraints(patterns: Vec<Vec<TileType>>, chunk_size: i32) ->
             compatible_with: [Vec::new(), Vec::new(), Vec::new(), Vec::new()],
         };
         for exit in new_chunk.exits.iter_mut() {
-            (0..chunk_size).for_each(|_| (*exit).push(false));
+            (0..chunk_size).for_each(|_| exit.push(false));
         }
 
         let mut n_exits = 0;
         for x in 0..chunk_size {
-            for (i, tile_idx) in Direction::get_indices(chunk_size, x)
-                .into_iter()
-                .enumerate()
-            {
+            for (i, tile_idx) in Direction::enumerate_tileidx(chunk_size, x) {
                 if new_chunk.pattern[tile_idx] == TileType::Floor {
-                    new_chunk.exits[i][x as usize] = true;
+                    new_chunk.exits[i as usize][x as usize] = true;
                     n_exits += 1;
                 }
             }
         }
-        new_chunk.has_exits = n_exits == 0;
+        new_chunk.has_exits = n_exits != 0;
         constraints.push(new_chunk);
     }
 
@@ -98,14 +95,13 @@ pub fn patterns_to_constraints(patterns: Vec<Vec<TileType>>, chunk_size: i32) ->
             } else {
                 for (direction, exit_list) in Direction::iterator().zip(constraint.exits.iter_mut())
                 {
-                    let opposite = direction.opposite();
-
+                    let opposite = direction.opposite() as usize;
                     let mut it_fits = false;
                     let mut has_any = false;
                     for (slot, can_enter) in exit_list.iter().enumerate() {
                         if *can_enter {
                             has_any = true;
-                            if potential.exits[opposite as usize][slot] {
+                            if potential.exits[opposite][slot] {
                                 it_fits = true;
                             }
                         }
@@ -116,10 +112,14 @@ pub fn patterns_to_constraints(patterns: Vec<Vec<TileType>>, chunk_size: i32) ->
                     }
 
                     if !has_any {
-                        constraint
-                            .compatible_with
-                            .iter_mut()
-                            .for_each(|c| c.push(j));
+                        let matching_exit_count = potential.exits[opposite].iter().filter(|a| !**a).count();
+                        if matching_exit_count == 0 {
+                            constraint.compatible_with[direction as usize].push(j);
+                        }
+                        // constraint
+                        //     .compatible_with
+                        //     .iter_mut()
+                        //     .for_each(|c| c.push(j));
                     }
                 }
             }

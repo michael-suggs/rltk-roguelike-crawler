@@ -56,6 +56,18 @@ impl Direction {
             .collect::<Vec<usize>>()
     }
 
+    pub fn enumerate_tileidx(chunk_size: i32, x: i32) -> Vec<(Direction, usize)> {
+        Direction::iterator()
+            .map(|d| (d, d.get_index(chunk_size, x)))
+            .collect::<Vec<(Direction, usize)>>()
+    }
+
+    pub fn enumerate_mapidx(map: &Map, chunk: &Chunk, x: i32) -> Vec<(Direction, usize)> {
+        Direction::iterator()
+            .map(|d| (d, d.map_index(map, chunk, x)))
+            .collect::<Vec<(Direction, usize)>>()
+    }
+
     pub fn iterator() -> impl Iterator<Item = Direction> {
         [
             Direction::North,

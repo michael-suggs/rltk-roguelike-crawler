@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use common::MapChunk;
 use constraints::{build_patterns, patterns_to_constraints, render_pattern_to_map, Chunk};
+use image_loader::load_rex_map;
 use solver::Solver;
 
 use crate::{spawner, Map, MapBuilder, Position, TileType, SHOW_MAPGEN_VISUALIZER};
@@ -15,12 +16,17 @@ mod constraints;
 mod image_loader;
 mod solver;
 
+#[derive(PartialEq, Clone, Copy)]
+pub enum WaveformMode { TestMap, Derived }
+
 pub struct WaveformCollapseBuilder {
     map: Map,
     starting_position: Position,
     depth: i32,
     history: Vec<Map>,
     noise_areas: HashMap<i32, Vec<usize>>,
+    mode: WaveformMode,
+    derive_from: Option<Box<dyn MapBuilder>>,
 }
 
 impl MapBuilder for WaveformCollapseBuilder {
@@ -56,7 +62,7 @@ impl MapBuilder for WaveformCollapseBuilder {
 }
 
 impl WaveformCollapseBuilder {
-    pub fn new(new_depth: i32) -> WaveformCollapseBuilder {
+    pub fn new(new_depth: i32, mode: WaveformMode, derive_from: Option<Box<dyn MapBuilder>>) -> WaveformCollapseBuilder {
         WaveformCollapseBuilder {
             map: image_loader::load_rex_map(
                 new_depth,
@@ -66,10 +72,38 @@ impl WaveformCollapseBuilder {
             depth: new_depth,
             history: Vec::new(),
             noise_areas: HashMap::new(),
+            mode,
+            derive_from,
         }
     }
 
+    pub fn test_map(new_depth: i32) -> WaveformCollapseBuilder {
+        WaveformCollapseBuilder::new(new_depth, WaveformMode::TestMap, None)
+    }
+
+    pub fn derived_map(new_depth: i32, builder: Box<dyn MapBuilder>) -> WaveformCollapseBuilder {
+        WaveformCollapseBuilder::new(new_depth, WaveformMode::Derived, Some(builder))
+    }
+
     fn build(&mut self) {
+        match self.mode {
+            WaveformMode::TestMap => {
+                self.map = load_rex_map(self.depth, &rltk::rex::XpFile::from_resource("../resources/wfc-demo2.xp").unwrap());
+                self.take_snapshot();
+            }
+            WaveformMode::Derived => {
+                let prebuilder = &mut self.derive_from.as_mut().unwrap();
+                prebuilder.build_map();
+                self.map = prebuilder.get_map();
+                for t in self.map.tiles.iter_mut() {
+                    if *t == TileType::DownStairs {
+                        *t = TileType::Floor;
+                    }
+                }
+                self.take_snapshot();
+            }
+        }
+
         const CHUNK_SIZE: i32 = 7;
         let mut rng = rltk::RandomNumberGenerator::new();
 

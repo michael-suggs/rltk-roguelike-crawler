@@ -45,13 +45,14 @@ impl Solver {
         for r in remaining_copy.iter_mut() {
             let idx = r.0;
             let chunk_x = idx % self.chunks_x;
-            let chunk_y = idx / self.chunks_y;
+            let chunk_y = idx / self.chunks_x;
             let neighbor_count = self.count_neighbors(chunk_x, chunk_y, None);
             if neighbor_count > 0 {
                 neighbors_exist = true;
             }
             *r = (r.0, neighbor_count);
         }
+
         remaining_copy.sort_by(|a, b| b.1.cmp(&a.1));
         self.remaining = remaining_copy;
 
@@ -61,7 +62,7 @@ impl Solver {
             0usize
         };
 
-        let chunk_idx = self.remaining.remove(r_idx).1 as usize;
+        let chunk_idx = self.remaining.remove(r_idx).0;
         let chunk_x = chunk_idx % self.chunks_x;
         let chunk_y = chunk_idx / self.chunks_x;
         let mut options: Vec<Vec<usize>> = Vec::new();
@@ -101,8 +102,8 @@ impl Solver {
                     1 => 0,
                     _ => rng.roll_dice(1, possible_options.len() as i32) - 1,
                 } as usize;
-                self.chunks[chunk_idx] = Some(new_chunk_idx);
-                self.apply_constraints_to_map(map, chunk_x, chunk_y, new_chunk_idx);
+                self.chunks[chunk_idx] = Some(possible_options[new_chunk_idx]);
+                self.apply_constraints_to_map(map, chunk_x, chunk_y, possible_options[new_chunk_idx]);
             }
         }
 
@@ -123,34 +124,31 @@ impl Solver {
 
         if chunk_x > 0 {
             let left = self.chunk_idx(chunk_x - 1, chunk_y);
-            if self.chunks[left].is_some() {
+            if let Some(l) = self.chunks[left] {
                 neighbors += 1;
                 if let Some(opt) = options.borrow_mut() {
-                    let n = self.chunks[left].unwrap();
-                    opt.push(self.constraints[n].compatible_with[Direction::East as usize].clone());
+                    opt.push(self.constraints[l].compatible_with[Direction::East as usize].clone());
                 }
             }
         }
 
         if chunk_x < self.chunks_x - 1 {
             let right = self.chunk_idx(chunk_x + 1, chunk_y);
-            if self.chunks[right].is_some() {
+            if let Some(r) = self.chunks[right] {
                 neighbors += 1;
                 if let Some(opt) = options.borrow_mut() {
-                    let n = self.chunks[right].unwrap();
-                    opt.push(self.constraints[n].compatible_with[Direction::West as usize].clone());
+                    opt.push(self.constraints[r].compatible_with[Direction::West as usize].clone());
                 }
             }
         }
 
         if chunk_y > 0 {
             let up = self.chunk_idx(chunk_x, chunk_y - 1);
-            if self.chunks[up].is_some() {
+            if let Some(u) = self.chunks[up] {
                 neighbors += 1;
                 if let Some(opt) = options.borrow_mut() {
-                    let n = self.chunks[up].unwrap();
                     opt.push(
-                        self.constraints[n].compatible_with[Direction::South as usize].clone(),
+                        self.constraints[u].compatible_with[Direction::South as usize].clone(),
                     );
                 }
             }
@@ -158,12 +156,11 @@ impl Solver {
 
         if chunk_y < self.chunks_y - 1 {
             let down = self.chunk_idx(chunk_x, chunk_y + 1);
-            if self.chunks[down].is_some() {
+            if let Some(d) = self.chunks[down] {
                 neighbors += 1;
                 if let Some(opt) = options.borrow_mut() {
-                    let n = self.chunks[down].unwrap();
                     opt.push(
-                        self.constraints[n].compatible_with[Direction::North as usize].clone(),
+                        self.constraints[d].compatible_with[Direction::North as usize].clone(),
                     );
                 }
             }
