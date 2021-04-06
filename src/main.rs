@@ -36,6 +36,7 @@ mod particle_system;
 mod player;
 mod random_table;
 mod rect;
+mod rex_assets;
 mod spawner;
 mod trigger_system;
 mod visibility_system;
@@ -126,7 +127,7 @@ fn main() -> rltk::BError {
     gs.ecs.register::<SingleActivation>();
 
     gs.ecs.insert(SimpleMarkerAllocator::<SerializeMe>::new());
-
+    gs.ecs.insert(rex_assets::RexAssets::new());
     gs.ecs.insert(Map::new(1));
     gs.ecs.insert(Point::new(0, 0));
     gs.ecs.insert(rltk::RandomNumberGenerator::new());

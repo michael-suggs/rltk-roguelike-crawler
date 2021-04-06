@@ -2,6 +2,8 @@ use rltk::{Point, Rltk, VirtualKeyCode, RGB};
 use specs::prelude::*;
 use std::collections::BTreeMap;
 
+use crate::rex_assets::RexAssets;
+
 use super::{components::*, gamelog::GameLog, Map, RunState, State};
 
 #[derive(PartialEq, Copy, Clone)]
@@ -26,6 +28,8 @@ pub enum GameOverResult {
 pub fn main_menu(gs: &mut State, ctx: &mut Rltk) -> MainMenuResult {
     let save_exists = super::saveload_system::does_save_exist();
     let runstate = gs.ecs.fetch::<RunState>();
+    let assets = gs.ecs.fetch::<RexAssets>();
+    ctx.render_xp_sprite(&assets.menu, 0, 0);
 
     ctx.print_color_centered(
         15,

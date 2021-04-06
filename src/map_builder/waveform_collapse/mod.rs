@@ -6,6 +6,9 @@ use super::common::{
     generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant,
 };
 
+mod constraints;
+mod image_loader;
+
 pub struct WaveformCollapseBuilder {
     map: Map,
     starting_position: Position,
@@ -49,7 +52,10 @@ impl MapBuilder for WaveformCollapseBuilder {
 impl WaveformCollapseBuilder {
     pub fn new(new_depth: i32) -> WaveformCollapseBuilder {
         WaveformCollapseBuilder {
-            map: Map::new(new_depth),
+            map: image_loader::load_rex_map(
+                new_depth,
+                &rltk::rex::XpFile::from_resource("../resources/wfc-demo1.xp").unwrap(),
+            ),
             starting_position: Position { x: 0, y: 0 },
             depth: new_depth,
             history: Vec::new(),
@@ -58,6 +64,7 @@ impl WaveformCollapseBuilder {
     }
 
     fn build(&mut self) {
+        const CHUNK_SIZE: i32 = 7;
         let mut rng = rltk::RandomNumberGenerator::new();
 
         self.starting_position = Position::from(self.map.center());
