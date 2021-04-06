@@ -74,6 +74,39 @@ pub fn patterns_to_constraints(patterns: Vec<Vec<TileType>>, chunk_size: i32) ->
             }
         }
         new_chunk.has_exits = n_exits == 0;
+        constraints.push(new_chunk);
+    }
+
+    let cloned_constraints = constraints.clone();
+    for constraint in constraints.iter_mut() {
+        for (j, potential) in cloned_constraints.iter().enumerate() {
+            if !constraint.has_exits || !potential.has_exits {
+                for compatible in constraint.compatible_with.iter_mut() {
+                    compatible.push(j);
+                }
+            } else {
+                for (direction, exit_list) in Direction::iterator().zip(constraint.exits.iter_mut()) {
+                    let opposite = direction.opposite();
+
+                    let mut it_fits = false;
+                    let mut has_any = false;
+                    for (slot, can_enter) in exit_list.iter().enumerate() {
+                        if *can_enter {
+                            has_any = true;
+                            if potential.exits[opposite as usize][slot] {
+                                it_fits = true;
+                            }
+                        }
+                    }
+
+                    if it_fits { constraint.compatible_with[direction as usize].push(j) }
+
+                    if !has_any {
+                        constraint.compatible_with.iter_mut().for_each(|c| c.push(j));
+                    }
+                }
+            }
+        }
     }
 
     constraints
@@ -81,10 +114,10 @@ pub fn patterns_to_constraints(patterns: Vec<Vec<TileType>>, chunk_size: i32) ->
 
 #[derive(Clone, Copy)]
 enum Direction {
-    North,
-    South,
-    West,
-    East,
+    North = 0,
+    South = 1,
+    West = 2,
+    East = 3,
 }
 
 impl Direction {
@@ -94,6 +127,15 @@ impl Direction {
             Direction::South => tile_idx_in_chunks(chunk_size, x, chunk_size - 1),
             Direction::West => tile_idx_in_chunks(chunk_size, 0, x),
             Direction::East => tile_idx_in_chunks(chunk_size, chunk_size - 1, x),
+        }
+    }
+
+    fn opposite(&self) -> Direction {
+        match self {
+            Direction::North => Direction::South,
+            Direction::South => Direction::North,
+            Direction::West => Direction::East,
+            Direction::East => Direction::West,
         }
     }
 
