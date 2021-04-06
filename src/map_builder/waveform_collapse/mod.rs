@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use crate::{spawner, Map, MapBuilder, Position, TileType, SHOW_MAPGEN_VISUALIZER};
 
+use self::constraints::{Chunk, render_pattern_to_map};
+
 use super::common::{
     generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant,
 };
@@ -71,12 +73,12 @@ impl WaveformCollapseBuilder {
         let mut start_idx = self
             .map
             .xy_idx(self.starting_position.x, self.starting_position.y);
-        while self.map.tiles[start_idx] != TileType::Floor {
-            self.starting_position.x -= 1;
-            start_idx = self
-                .map
-                .xy_idx(self.starting_position.x, self.starting_position.y);
-        }
+        // while self.map.tiles[start_idx] != TileType::Floor {
+        //     self.starting_position.x -= 1;
+        //     start_idx = self
+        //         .map
+        //         .xy_idx(self.starting_position.x, self.starting_position.y);
+        // }
         self.take_snapshot();
 
         let exit_tile = remove_unreachable_areas_returning_most_distant(&mut self.map, start_idx);
@@ -84,5 +86,36 @@ impl WaveformCollapseBuilder {
         self.take_snapshot();
 
         self.noise_areas = generate_voronoi_spawn_regions(&self.map, &mut rng);
+    }
+
+    fn render_tile_gallery(&mut self, patterns: &Vec<Vec<TileType>>, chunk_size: i32) {
+        self.map = Map::new(0);
+        let mut ctr = 0;
+        let mut x = 1;
+        let mut y = 1;
+
+        while ctr < patterns.len() {
+            let chunk = Chunk::new(chunk_size, x, y);
+            render_pattern_to_map(&mut self.map, &patterns[ctr], chunk);
+
+            x += chunk_size + 1;
+            if x + chunk_size > self.map.width {
+                // Move to the next row
+                x = 1;
+                y += chunk_size + 1;
+
+                if y + chunk_size > self.map.height {
+                    // Move to the next page
+                    self.take_snapshot();
+                    self.map = Map::new(0);
+
+                    x = 1;
+                    y = 1;
+                }
+            }
+            ctr += 1;
+        }
+        self.take_snapshot();
+
     }
 }

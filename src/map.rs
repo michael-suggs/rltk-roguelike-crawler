@@ -8,7 +8,7 @@ pub const MAPHEIGHT: usize = 43;
 pub const MAPCOUNT: usize = MAPHEIGHT * MAPWIDTH;
 
 /// Enum differentiating floor tiles from wall tiles.
-#[derive(PartialEq, Copy, Clone, Serialize, Deserialize)]
+#[derive(Eq, PartialEq, Copy, Clone, Hash, Serialize, Deserialize)]
 pub enum TileType {
     Wall,
     Floor,

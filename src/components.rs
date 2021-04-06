@@ -8,7 +8,7 @@ use specs::{
 use specs_derive::*;
 
 /// Component detailing the 2D position of an entity.
-#[derive(Component, ConvertSaveload, Clone)]
+#[derive(Component, ConvertSaveload, Clone, Copy)]
 pub struct Position {
     pub x: i32,
     pub y: i32,

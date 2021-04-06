@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::{Map, Position, TileType};
 
 pub fn build_patterns(
@@ -5,64 +7,122 @@ pub fn build_patterns(
     chunk_size: i32,
     include_flipping: bool,
     dedupe: bool,
-) -> Vec<BuildPattern> {
+) -> Vec<Vec<TileType>> {
     let chunks_x = map.width / chunk_size;
     let chunks_y = map.height / chunk_size;
-    let mut patterns: Vec<BuildPattern> = Vec::new();
+    let mut patterns: Vec<Vec<TileType>> = Vec::new();
 
     for cy in 0..chunks_y {
         for cx in 0..chunks_x {
-            let mut pattern: BuildPattern = BuildPattern::new(
-                Position { x: cx * chunk_size, y: cy * chunk_size },
-                Position { x: (cx + 1) * chunk_size, y: (cy + 1) * chunk_size }
-            );
+            let mut pattern: BuildPattern = BuildPattern::new(Chunk::new(chunk_size, cx, cy));
+            pattern.add_tiles(map);
 
-            for y in pattern.start.y..pattern.end.y {
-                for x in pattern.start.x..pattern.end.x {
-                    let idx = map.xy_idx(x, y);
-                    pattern.add_tile(map.tiles[idx]);
-                }
+            if include_flipping {
+                patterns.push(pattern.flip_horizontal(map).pattern());
+                patterns.push(pattern.flip_vertical(map).pattern());
+                patterns.push(pattern.flip_both(map).pattern());
             }
 
-            patterns.push(pattern);
+            patterns.push(pattern.pattern());
         }
+    }
+
+    if dedupe {
+        rltk::console::log(format!("Pre-dedupe: {} patterns", patterns.len()));
+        let set: HashSet<Vec<TileType>> = patterns.drain(..).collect();
+        patterns.extend(set.into_iter());
+        rltk::console::log(format!("Post-dedupe: {} patterns", patterns.len()))
     }
 
     patterns
 }
 
-pub struct BuildPattern {
-    tiles: Vec<TileType>,
+pub fn render_pattern_to_map(map: &mut Map, pattern: &Vec<TileType>, chunk: Chunk) {
+    let mut i = 0usize;
+    for tile_pos in chunk.into_iter() {
+        let idx = map.xy_idx(tile_pos.x, tile_pos.y);
+        map.tiles[idx] = pattern[i];
+        map.visible_tiles[idx] = true;
+        i += 1;
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct Chunk {
+    size: i32,
     start: Position,
     end: Position,
 }
 
+impl Chunk {
+    pub fn new(chunk_size: i32, x: i32, y: i32) -> Chunk {
+        Chunk {
+            size: chunk_size,
+            start: Position { x: x * chunk_size, y: y * chunk_size },
+            end: Position { x: (x + 1) * chunk_size, y: (y + 1) * chunk_size },
+        }
+    }
+}
+
+impl IntoIterator for Chunk {
+    type Item = Position;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        (self.start.y..self.end.y)
+            .flat_map(|y| std::iter::repeat(y).zip(self.start.x..self.end.x))
+            .map(|(y, x)| Position { x, y })
+            .collect::<Vec<Position>>()
+            .into_iter()
+    }
+}
+
+struct BuildPattern {
+    tiles: Vec<TileType>,
+    chunk: Chunk,
+}
+
 impl BuildPattern {
-    pub fn new(start: Position, end: Position) -> BuildPattern {
+    fn new(chunk: Chunk) -> BuildPattern {
         BuildPattern {
             tiles: Vec::new(),
-            start,
-            end
+            chunk
         }
     }
 
-    pub fn add_tile(&mut self, tile: TileType) {
+    fn add_tile(&mut self, tile: TileType) {
         self.tiles.push(tile);
     }
 
-    pub fn flip_vertically(&mut self) -> BuildPattern {
-        let flipped = BuildPattern::new(self.start, self.end);
-        for y in self.start.y..self.end.y {
-            for x in self.start.x..self.end.x {
-                let idx = self.xy_idx(x, y);
-                flipped.add_tile(tile)
-            }
+    fn add_tiles(&mut self, map: &Map) {
+        for pos in self.chunk.into_iter() {
+            let idx = map.xy_idx(pos.x, pos.y);
+            self.add_tile(map.tiles[idx]);
         }
+    }
 
+    fn pattern(&self) -> Vec<TileType> {
+        self.tiles.clone()
+    }
+
+    fn flip_horizontal(&self, map: &Map) -> BuildPattern {
+        let mut flipped = BuildPattern::new(self.chunk);
+        for pos in self.chunk {
+            let idx = map.xy_idx(pos.x, pos.y);
+            flipped.add_tile(map.tiles[idx]);
+        }
         flipped
     }
 
-    fn xy_idx(&self, x: i32, y: i32) -> usize {
-        (y as usize * crate::MAPWIDTH as usize) + x as usize
+    fn flip_vertical(&self, map: &Map) -> BuildPattern {
+        let mut flipped = BuildPattern::new(self.chunk);
+        flipped.add_tiles(map);
+        flipped
+    }
+
+    pub fn flip_both(&self, map: &Map) -> BuildPattern {
+        let mut flipped = BuildPattern::new(self.chunk);
+        flipped.add_tiles(map);
+        flipped
     }
 }
