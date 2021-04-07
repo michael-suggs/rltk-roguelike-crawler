@@ -77,8 +77,11 @@ impl PrefabBuilder {
             // mode: PrefabMode::RexLevel {
             //     template: "../resources/wfc-populated.xp",
             // },
-            mode: PrefabMode::Constant {
-                level: prefab_levels::WFC_POPULATED,
+            // mode: PrefabMode::Constant {
+            //     level: prefab_levels::WFC_POPULATED,
+            // },
+            mode: PrefabMode::Sectional {
+                section: prefab_sections::UNDERGROUND_FORT,
             },
             spawn_list: Vec::new(),
             previous_builder,
@@ -93,10 +96,10 @@ impl PrefabBuilder {
         }
         self.take_snapshot();
 
+        let mut start_idx: usize;
         if self.starting_position.x == 0 {
             self.starting_position = Position::from(self.map.center());
-
-            let mut start_idx = self
+            start_idx = self
                 .map
                 .xy_idx(self.starting_position.x, self.starting_position.y);
 
@@ -107,7 +110,18 @@ impl PrefabBuilder {
                     .xy_idx(self.starting_position.x, self.starting_position.y);
             }
             self.take_snapshot();
+        }
+        let mut has_exit = false;
+        for t in self.map.tiles.iter() {
+            if *t == TileType::DownStairs {
+                has_exit = true;
+            }
+        }
 
+        if !has_exit {
+            start_idx = self
+                .map
+                .xy_idx(self.starting_position.x, self.starting_position.y);
             let exit_tile =
                 remove_unreachable_areas_returning_most_distant(&mut self.map, start_idx);
             self.map.tiles[exit_tile] = TileType::DownStairs;
@@ -121,6 +135,10 @@ impl PrefabBuilder {
             '#' => self.map.tiles[idx] = TileType::Wall,
             '@' => {
                 self.map.tiles[idx] = TileType::Floor;
+                self.starting_position = Position {
+                    x: idx as i32 % self.map.width,
+                    y: idx as i32 / self.map.width,
+                };
             }
             '>' => self.map.tiles[idx] = TileType::DownStairs,
             'g' => {
@@ -163,12 +181,25 @@ impl PrefabBuilder {
         }
     }
 
+    fn read_ascii_to_vec(template: &str) -> Vec<char> {
+        let mut string_vec: Vec<char> = template
+            .chars()
+            .filter(|c| *c != '\r' && *c != '\n')
+            .collect();
+        string_vec.iter_mut().for_each(|c| {
+            if *c as u8 == 160u8 {
+                *c = ' ';
+            }
+        });
+        string_vec
+    }
+
     fn load_ascii_map(&mut self, level: &prefab_levels::PrefabLevel) {
         let string_vec: Vec<char> = PrefabBuilder::read_ascii_to_vec(level.template);
         let mut i = 0;
         for y in 0..level.height {
             for x in 0..level.width {
-                if x < self.map.width as usize && y < self.map.height as usize {
+                if x > 0 && y > 0 && x < self.map.width as usize && y < self.map.height as usize {
                     let idx = self.map.xy_idx(x as i32, y as i32);
                     self.char_to_map(string_vec[i], idx);
                 }
@@ -178,13 +209,9 @@ impl PrefabBuilder {
     }
 
     fn apply_sectional(&mut self, section: &prefab_sections::PrefabSection) {
-        let prev_builder = self.previous_builder.as_mut().unwrap();
-        prev_builder.build_map();
-        self.starting_position = prev_builder.get_starting_position();
-        self.map = prev_builder.get_map().clone();
-        self.take_snapshot();
-
-        let string_vec = PrefabBuilder::read_ascii_to_vec(section.template);
+        let string_vec = PrefabBuilder::read_ascii_to_vec(
+            prefab_sections::get_template_str(section.to_owned()).as_str(),
+        );
         let chunk_x = match section.placement.0 {
             HorizontalPlacement::Left => 0,
             HorizontalPlacement::Center => (self.map.width / 2) - (section.width as i32 / 2),
@@ -196,10 +223,35 @@ impl PrefabBuilder {
             VerticalPlacement::Bottom => (self.map.height - 1) - section.height as i32,
         };
 
+        let prev_builder = self.previous_builder.as_mut().unwrap();
+        prev_builder.build_map();
+        self.starting_position = prev_builder.get_starting_position();
+        self.map = prev_builder.get_map().clone();
+
+        for ent in prev_builder.get_spawn_list().iter() {
+            let pos = Position {
+                x: ent.0 as i32 % self.map.width,
+                y: ent.0 as i32 / self.map.width,
+            };
+
+            if pos.x < chunk_x
+                || pos.x > (chunk_x + section.width as i32)
+                || pos.y < chunk_y
+                || pos.y > (chunk_y + section.height as i32)
+            {
+                self.spawn_list.push((ent.0, ent.1.to_string()));
+            }
+        }
+        self.take_snapshot();
+
         let mut i = 0;
         for y in 0..section.height {
             for x in 0..section.width {
-                if x < self.map.width as usize && y < self.map.height as usize {
+                if x > 0
+                    && x < self.map.width as usize - 1
+                    && y > 0
+                    && y < self.map.height as usize - 1
+                {
                     let idx = self.map.xy_idx(x as i32 + chunk_x, y as i32 + chunk_y);
                     self.char_to_map(string_vec[i], idx);
                 }
@@ -207,18 +259,5 @@ impl PrefabBuilder {
             }
         }
         self.take_snapshot();
-    }
-
-    fn read_ascii_to_vec(template: &str) -> Vec<char> {
-        let mut string_vec: Vec<char> = template
-            .chars()
-            .filter(|c| *c != '\r' && *c != '\n')
-            .collect();
-        string_vec.iter_mut().for_each(|c| {
-            if *c as u8 == 160u8 {
-                *c = ' '
-            }
-        });
-        string_vec
     }
 }

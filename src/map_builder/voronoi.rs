@@ -6,7 +6,9 @@ use crate::{
     spawner, Map, MapBuilder, Position, TileType, MAPHEIGHT, MAPWIDTH, SHOW_MAPGEN_VISUALIZER,
 };
 
-use super::common::{generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant};
+use super::common::{
+    generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant,
+};
 
 /// Implemented distance algorithm function definitions.
 #[derive(PartialEq, Clone, Copy)]
@@ -122,10 +124,14 @@ impl VoronoiBuilder {
         }
 
         self.starting_position = Position::from(self.map.center());
-        let mut start_idx = self.map.xy_idx(self.starting_position.x, self.starting_position.y);
+        let mut start_idx = self
+            .map
+            .xy_idx(self.starting_position.x, self.starting_position.y);
         while self.map.tiles[start_idx] != TileType::Floor {
             self.starting_position.x -= 1;
-            start_idx = self.map.xy_idx(self.starting_position.x, self.starting_position.y);
+            start_idx = self
+                .map
+                .xy_idx(self.starting_position.x, self.starting_position.y);
         }
 
         let exit_tile = remove_unreachable_areas_returning_most_distant(&mut self.map, start_idx);
