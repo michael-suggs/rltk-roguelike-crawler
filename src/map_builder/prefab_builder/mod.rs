@@ -238,7 +238,7 @@ impl PrefabBuilder {
 
     fn apply_room_vaults(&mut self) {
         let mut rng = rltk::RandomNumberGenerator::new();
-        self.apply_previous_iteration(|_,_,_| true);
+        self.apply_previous_iteration(|_, _, _| true);
 
         let master_vault_list = vec![prefab_rooms::NOT_A_TRAP];
         let possible_vaults: Vec<&PrefabRoom> = master_vault_list
@@ -291,6 +291,17 @@ impl PrefabBuilder {
                 _ => (rng.roll_dice(1, vault_positions.len() as i32) - 1) as usize,
             };
             let pos = &vault_positions[pos_idx];
+
+            let width = self.map.width;
+            let height = self.map.height;
+            self.spawn_list.retain(|ent| {
+                let x = ent.0 as i32 % width;
+                let y = ent.0 as i32 / height;
+                x < pos.x
+                    || x > pos.x + vault.width as i32
+                    || y < pos.y
+                    || y > pos.y + vault.height as i32
+            });
 
             let string_vec = PrefabBuilder::read_ascii_to_vec(vault.template);
             let mut i = 0;

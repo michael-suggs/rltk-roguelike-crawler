@@ -12,7 +12,7 @@ pub struct PrefabRoom {
 pub fn get_template_str(room: PrefabRoom) -> String {
     room.template
         .split_terminator('\n')
-        .map(|line| format!("{line: <0$}", room.width, line=line))
+        .map(|line| format!("{line: <0$}", room.width, line = line))
         .collect::<String>()
 }
 

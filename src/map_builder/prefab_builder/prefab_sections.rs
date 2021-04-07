@@ -28,9 +28,10 @@ pub const UNDERGROUND_FORT: PrefabSection = PrefabSection {
 };
 
 pub fn get_template_str(section: PrefabSection) -> String {
-    section.template
+    section
+        .template
         .split_terminator('\n')
-        .map(|line| format!("{line: <0$}", section.width, line=line))
+        .map(|line| format!("{line: <0$}", section.width, line = line))
         .collect::<String>()
 }
 
