@@ -5,6 +5,7 @@ use super::common::remove_unreachable_areas_returning_most_distant;
 use prefab_sections::{HorizontalPlacement, VerticalPlacement};
 
 mod prefab_levels;
+mod prefab_rooms;
 mod prefab_sections;
 
 #[allow(dead_code)]

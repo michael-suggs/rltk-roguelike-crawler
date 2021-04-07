@@ -20,10 +20,6 @@ pub struct PrefabSection {
     pub placement: (HorizontalPlacement, VerticalPlacement),
 }
 
-pub fn get_template_str(section: PrefabSection) -> String {
-    pad(section.template)
-}
-
 pub const UNDERGROUND_FORT: PrefabSection = PrefabSection {
     template: RIGHT_FORT,
     width: 15,
@@ -31,10 +27,10 @@ pub const UNDERGROUND_FORT: PrefabSection = PrefabSection {
     placement: (HorizontalPlacement::Right, VerticalPlacement::Top),
 };
 
-fn pad(template: &str) -> String {
-    template
+pub fn get_template_str(section: PrefabSection) -> String {
+    section.template
         .split_terminator('\n')
-        .map(|line| format!("{: <15}", line))
+        .map(|line| format!("{line: <0$}", section.width, line=line))
         .collect::<String>()
 }
 
