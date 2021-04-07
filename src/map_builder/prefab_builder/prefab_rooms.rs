@@ -1,3 +1,5 @@
+use crate::Position;
+
 #[derive(PartialEq, Clone, Copy)]
 pub struct PrefabRoom {
     pub template: &'static str,
@@ -12,6 +14,11 @@ pub fn get_template_str(room: PrefabRoom) -> String {
         .split_terminator('\n')
         .map(|line| format!("{line: <0$}", room.width, line=line))
         .collect::<String>()
+}
+
+pub struct Vault<'a> {
+    vault: &'a PrefabRoom,
+    pos: Position,
 }
 
 pub const NOT_A_TRAP: PrefabRoom = PrefabRoom {

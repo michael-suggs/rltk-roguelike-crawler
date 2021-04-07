@@ -2,6 +2,7 @@ use crate::{spawner, Map, MapBuilder, Position, TileType, SHOW_MAPGEN_VISUALIZER
 
 use super::common::remove_unreachable_areas_returning_most_distant;
 
+use prefab_rooms::{PrefabRoom, Vault};
 use prefab_sections::{HorizontalPlacement, VerticalPlacement};
 
 mod prefab_levels;
@@ -20,6 +21,7 @@ pub enum PrefabMode {
     Sectional {
         section: prefab_sections::PrefabSection,
     },
+    RoomVaults,
 }
 
 pub struct PrefabBuilder {
@@ -94,6 +96,7 @@ impl PrefabBuilder {
             PrefabMode::RexLevel { template } => self.load_rex_map(&template),
             PrefabMode::Constant { level } => self.load_ascii_map(&level),
             PrefabMode::Sectional { section } => self.apply_sectional(&section),
+            PrefabMode::RoomVaults => self.apply_room_vaults(),
         }
         self.take_snapshot();
 
@@ -224,41 +227,99 @@ impl PrefabBuilder {
             VerticalPlacement::Bottom => (self.map.height - 1) - section.height as i32,
         };
 
+        self.apply_previous_iteration(|x, y, e| {
+            x < chunk_x
+                || x > (chunk_x + section.width as i32)
+                || y < chunk_y
+                || y > (chunk_y + section.height as i32)
+        });
+        self.take_snapshot();
+    }
+
+    fn apply_room_vaults(&mut self) {
+        let mut rng = rltk::RandomNumberGenerator::new();
+        self.apply_previous_iteration(|_,_,_| true);
+
+        let master_vault_list = vec![prefab_rooms::NOT_A_TRAP];
+        let possible_vaults: Vec<&PrefabRoom> = master_vault_list
+            .iter()
+            .filter(|v| self.depth >= v.first_depth && self.depth <= v.last_depth)
+            .collect();
+
+        if possible_vaults.is_empty() {
+            return;
+        }
+
+        let vidx = match possible_vaults.len() {
+            1 => 0,
+            _ => (rng.roll_dice(1, possible_vaults.len() as i32) - 1) as usize,
+        };
+        let vault = possible_vaults[vidx];
+        let mut vault_positions: Vec<Position> = Vec::new();
+
+        let mut i = 0usize;
+        while i < (self.map.tiles.len() - 1) {
+            let x = (i % self.map.width as usize) as i32;
+            let y = (i / self.map.width as usize) as i32;
+
+            if x > 1
+                && y > 1
+                && (x + vault.width as i32) < self.map.width - 2
+                && (y + vault.height as i32) < self.map.height - 2
+            {
+                let mut possible = true;
+                for vy in 0..vault.height as i32 {
+                    for vx in 0..vault.width as i32 {
+                        let idx = self.map.xy_idx(vx + x, vy + y);
+                        if self.map.tiles[idx] != TileType::Floor {
+                            possible = false;
+                        }
+                    }
+                }
+
+                if possible {
+                    vault_positions.push(Position { x, y });
+                    break;
+                }
+            }
+            i += 1;
+        }
+
+        if !vault_positions.is_empty() {
+            let pos_idx = match vault_positions.len() {
+                1 => 0,
+                _ => (rng.roll_dice(1, vault_positions.len() as i32) - 1) as usize,
+            };
+            let pos = &vault_positions[pos_idx];
+
+            let string_vec = PrefabBuilder::read_ascii_to_vec(vault.template);
+            let mut i = 0;
+            for y in 0..vault.height {
+                for x in 0..vault.width {
+                    let idx = self.map.xy_idx(x as i32 + pos.x, y as i32 + pos.y);
+                    self.char_to_map(string_vec[i], idx);
+                    i += 1;
+                }
+            }
+            self.take_snapshot();
+        }
+    }
+
+    fn apply_previous_iteration<F>(&mut self, mut filter: F)
+    where
+        F: FnMut(i32, i32, &(usize, String)) -> bool,
+    {
         let prev_builder = self.previous_builder.as_mut().unwrap();
         prev_builder.build_map();
         self.starting_position = prev_builder.get_starting_position();
         self.map = prev_builder.get_map().clone();
 
         for ent in prev_builder.get_spawn_list().iter() {
-            let pos = Position {
-                x: ent.0 as i32 % self.map.width,
-                y: ent.0 as i32 / self.map.width,
-            };
-
-            if pos.x < chunk_x
-                || pos.x > (chunk_x + section.width as i32)
-                || pos.y < chunk_y
-                || pos.y > (chunk_y + section.height as i32)
-            {
+            let x = ent.0 as i32 % self.map.width;
+            let y = ent.0 as i32 / self.map.width;
+            if filter(x, y, ent) {
                 self.spawn_list.push((ent.0, ent.1.to_string()));
             }
         }
-        self.take_snapshot();
-
-        let mut i = 0;
-        for y in 0..section.height {
-            for x in 0..section.width {
-                if x > 0
-                    && x < self.map.width as usize - 1
-                    && y > 0
-                    && y < self.map.height as usize - 1
-                {
-                    let idx = self.map.xy_idx(x as i32 + chunk_x, y as i32 + chunk_y);
-                    self.char_to_map(string_vec[i], idx);
-                }
-                i += 1;
-            }
-        }
-        self.take_snapshot();
     }
 }
