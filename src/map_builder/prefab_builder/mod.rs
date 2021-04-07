@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::{spawner, Map, MapBuilder, Position, TileType, SHOW_MAPGEN_VISUALIZER};
 
 use super::common::remove_unreachable_areas_returning_most_distant;
@@ -240,79 +242,94 @@ impl PrefabBuilder {
         let mut rng = rltk::RandomNumberGenerator::new();
         self.apply_previous_iteration(|_, _, _| true);
 
-        let master_vault_list = vec![prefab_rooms::NOT_A_TRAP];
+        if rng.roll_dice(1, 6) + self.depth < 4 {
+            return;
+        }
+
+        let master_vault_list = vec![
+            prefab_rooms::NOT_A_TRAP,
+            prefab_rooms::CHECKERBOARD,
+            prefab_rooms::SILLY_SMILE,
+        ];
         let possible_vaults: Vec<&PrefabRoom> = master_vault_list
             .iter()
             .filter(|v| self.depth >= v.first_depth && self.depth <= v.last_depth)
             .collect();
-
         if possible_vaults.is_empty() {
             return;
         }
 
-        let vidx = match possible_vaults.len() {
-            1 => 0,
-            _ => (rng.roll_dice(1, possible_vaults.len() as i32) - 1) as usize,
-        };
-        let vault = possible_vaults[vidx];
-        let mut vault_positions: Vec<Position> = Vec::new();
+        let mut used_tiles: HashSet<usize> = HashSet::new();
+        let n_vaults = i32::min(
+            rng.roll_dice(1, master_vault_list.len() as i32),
+            possible_vaults.len() as i32,
+        );
 
-        let mut i = 0usize;
-        while i < (self.map.tiles.len() - 1) {
-            let x = (i % self.map.width as usize) as i32;
-            let y = (i / self.map.width as usize) as i32;
+        for _ in 0..n_vaults {
+            let vidx = match possible_vaults.len() {
+                1 => 0,
+                _ => (rng.roll_dice(1, possible_vaults.len() as i32) - 1) as usize,
+            };
+            let vault = possible_vaults[vidx];
+            let mut vault_positions: Vec<Position> = Vec::new();
 
-            if x > 1
-                && y > 1
-                && (x + vault.width as i32) < self.map.width - 2
-                && (y + vault.height as i32) < self.map.height - 2
-            {
-                let mut possible = true;
-                for vy in 0..vault.height as i32 {
-                    for vx in 0..vault.width as i32 {
-                        let idx = self.map.xy_idx(vx + x, vy + y);
-                        if self.map.tiles[idx] != TileType::Floor {
-                            possible = false;
+            let mut i = 0usize;
+            while i < (self.map.tiles.len() - 1) {
+                let x = (i % self.map.width as usize) as i32;
+                let y = (i / self.map.width as usize) as i32;
+
+                if x > 1
+                    && y > 1
+                    && (x + vault.width as i32) < self.map.width - 2
+                    && (y + vault.height as i32) < self.map.height - 2
+                {
+                    let mut possible = true;
+                    for vy in 0..vault.height as i32 {
+                        for vx in 0..vault.width as i32 {
+                            let idx = self.map.xy_idx(vx + x, vy + y);
+                            possible = (self.map.tiles[idx] == TileType::Floor)
+                                && !used_tiles.contains(&idx);
                         }
                     }
-                }
 
-                if possible {
-                    vault_positions.push(Position { x, y });
-                    break;
+                    if possible {
+                        vault_positions.push(Position { x, y });
+                        break;
+                    }
                 }
+                i += 1;
             }
-            i += 1;
-        }
 
-        if !vault_positions.is_empty() {
-            let pos_idx = match vault_positions.len() {
-                1 => 0,
-                _ => (rng.roll_dice(1, vault_positions.len() as i32) - 1) as usize,
-            };
-            let pos = &vault_positions[pos_idx];
+            if !vault_positions.is_empty() {
+                let pos_idx = match vault_positions.len() {
+                    1 => 0,
+                    _ => (rng.roll_dice(1, vault_positions.len() as i32) - 1) as usize,
+                };
+                let pos = &vault_positions[pos_idx];
 
-            let width = self.map.width;
-            let height = self.map.height;
-            self.spawn_list.retain(|ent| {
-                let x = ent.0 as i32 % width;
-                let y = ent.0 as i32 / height;
-                x < pos.x
-                    || x > pos.x + vault.width as i32
-                    || y < pos.y
-                    || y > pos.y + vault.height as i32
-            });
+                let width = self.map.width;
+                let height = self.map.height;
+                self.spawn_list.retain(|ent| {
+                    let x = ent.0 as i32 % width;
+                    let y = ent.0 as i32 / height;
+                    x < pos.x
+                        || x > pos.x + vault.width as i32
+                        || y < pos.y
+                        || y > pos.y + vault.height as i32
+                });
 
-            let string_vec = PrefabBuilder::read_ascii_to_vec(vault.template);
-            let mut i = 0;
-            for y in 0..vault.height {
-                for x in 0..vault.width {
-                    let idx = self.map.xy_idx(x as i32 + pos.x, y as i32 + pos.y);
-                    self.char_to_map(string_vec[i], idx);
-                    i += 1;
+                let string_vec = PrefabBuilder::read_ascii_to_vec(vault.template);
+                let mut i = 0;
+                for y in 0..vault.height {
+                    for x in 0..vault.width {
+                        let idx = self.map.xy_idx(x as i32 + pos.x, y as i32 + pos.y);
+                        self.char_to_map(string_vec[i], idx);
+                        used_tiles.insert(idx);
+                        i += 1;
+                    }
                 }
+                self.take_snapshot();
             }
-            self.take_snapshot();
         }
     }
 
