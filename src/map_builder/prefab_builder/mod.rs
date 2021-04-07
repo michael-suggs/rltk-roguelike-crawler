@@ -73,7 +73,11 @@ impl MapBuilder for PrefabBuilder {
 }
 
 impl PrefabBuilder {
-    pub fn new(new_depth: i32, previous_builder: Option<Box<dyn MapBuilder>>) -> PrefabBuilder {
+    pub fn new(
+        new_depth: i32,
+        mode: PrefabMode,
+        previous_builder: Option<Box<dyn MapBuilder>>,
+    ) -> PrefabBuilder {
         PrefabBuilder {
             map: Map::new(new_depth),
             starting_position: Position::default(),
@@ -85,12 +89,34 @@ impl PrefabBuilder {
             // mode: PrefabMode::Constant {
             //     level: prefab_levels::WFC_POPULATED,
             // },
-            mode: PrefabMode::Sectional {
-                section: prefab_sections::UNDERGROUND_FORT,
-            },
+            mode,
             spawn_list: Vec::new(),
             previous_builder,
         }
+    }
+
+    pub fn rex_level(new_depth: i32, template: &'static str) -> PrefabBuilder {
+        PrefabBuilder::new(new_depth, PrefabMode::RexLevel { template }, None)
+    }
+
+    pub fn constant(new_depth: i32, level: prefab_levels::PrefabLevel) -> PrefabBuilder {
+        PrefabBuilder::new(new_depth, PrefabMode::Constant { level }, None)
+    }
+
+    pub fn sectional(
+        new_depth: i32,
+        section: prefab_sections::PrefabSection,
+        previous_builder: Option<Box<dyn MapBuilder>>,
+    ) -> PrefabBuilder {
+        PrefabBuilder::new(
+            new_depth,
+            PrefabMode::Sectional { section },
+            previous_builder,
+        )
+    }
+
+    pub fn vaults(new_depth: i32, previous_builder: Option<Box<dyn MapBuilder>>) -> PrefabBuilder {
+        PrefabBuilder::new(new_depth, PrefabMode::RoomVaults, previous_builder)
     }
 
     fn build(&mut self) {
