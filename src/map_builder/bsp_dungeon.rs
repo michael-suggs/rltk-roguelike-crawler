@@ -10,18 +10,12 @@ pub struct BspDungeonBuilder {
     rooms: Vec<Rect>,
     history: Vec<Map>,
     rects: Vec<Rect>,
+    spawn_list: Vec<(usize, String)>,
 }
 
 impl MapBuilder for BspDungeonBuilder {
     fn build_map(&mut self) {
         self.build();
-    }
-
-    fn spawn_entities(&mut self, ecs: &mut specs::World) {
-        self.rooms
-            .iter()
-            .skip(1)
-            .for_each(|room| spawner::spawn_room(ecs, room, self.depth));
     }
 
     fn get_map(&self) -> Map {
@@ -43,6 +37,10 @@ impl MapBuilder for BspDungeonBuilder {
             self.history.push(snapshot);
         }
     }
+
+    fn get_spawn_list(&self) -> &Vec<(usize, String)> {
+        &self.spawn_list
+    }
 }
 
 impl BspDungeonBuilder {
@@ -54,6 +52,7 @@ impl BspDungeonBuilder {
             rooms: Vec::<Rect>::new(),
             history: Vec::<Map>::new(),
             rects: Vec::<Rect>::new(),
+            spawn_list: Vec::new(),
         }
     }
 
@@ -105,6 +104,10 @@ impl BspDungeonBuilder {
         let stairs = self.rooms[self.rooms.len() - 1].center();
         let stairs_idx = self.map.xy_idx(stairs.0, stairs.1);
         self.map.tiles[stairs_idx] = TileType::DownStairs;
+
+        for room in self.rooms.iter().skip(1) {
+            spawner::spawn_room(&self.map, &mut rng, room, self.depth, &mut self.spawn_list);
+        }
     }
 
     /// Splits a rectangle into four quadrants.

@@ -48,10 +48,15 @@ pub fn player(ecs: &mut World, player_x: i32, player_y: i32) -> Entity {
 }
 
 /// Spawns a room with entities from the spawn table.
-pub fn spawn_room(ecs: &mut World, room: &Rect, map_depth: i32) {
+pub fn spawn_room(
+    map: &Map,
+    rng: &mut RandomNumberGenerator,
+    room: &Rect,
+    map_depth: i32,
+    spawn_list: &mut Vec<(usize, String)>,
+) {
     let mut possible_targets: Vec<usize> = Vec::new();
     {
-        let map = ecs.fetch::<Map>();
         for y in room.y1 + 1..room.y2 {
             for x in room.x1 + 1..room.x2 {
                 let idx = map.xy_idx(x, y);
@@ -61,11 +66,17 @@ pub fn spawn_room(ecs: &mut World, room: &Rect, map_depth: i32) {
             }
         }
     }
-    spawn_region(ecs, &possible_targets, map_depth);
+    spawn_region(map, rng, &possible_targets, map_depth, spawn_list);
 }
 
 /// Spawns a contiguous area with entities from the spawn table.
-pub fn spawn_region(ecs: &mut World, area: &[usize], map_depth: i32) {
+pub fn spawn_region(
+    map: &Map,
+    rng: &mut RandomNumberGenerator,
+    area: &[usize],
+    map_depth: i32,
+    spawn_list: &mut Vec<(usize, String)>,
+) {
     // Get spawn table for the current depth.
     let spawn_table = room_table(map_depth);
     // Map map indices to entity names for spawning.
@@ -73,8 +84,6 @@ pub fn spawn_region(ecs: &mut World, area: &[usize], map_depth: i32) {
     // Copy to prevent modifying original slice.
     let mut areas: Vec<usize> = Vec::from(area);
     {
-        // Get the rng we registered with the game to use for spawning.
-        let mut rng = ecs.write_resource::<RandomNumberGenerator>();
         // Cap the number of entities to spawn, so we don't spawn more than we have room for.
         let num_spawns = i32::min(
             areas.len() as i32,
@@ -95,13 +104,13 @@ pub fn spawn_region(ecs: &mut World, area: &[usize], map_depth: i32) {
                 (rng.roll_dice(1, areas.len() as i32) - 1) as usize
             };
             // Insert the new spawn point with a random entity to spawn.
-            spawn_points.insert(areas[array_index], spawn_table.roll(&mut rng));
+            spawn_points.insert(areas[array_index], spawn_table.roll(rng));
             // Already used as a spawn point, so take it out.
             areas.remove(array_index);
         }
     }
     for spawn in spawn_points.iter() {
-        spawn_entity(ecs, &spawn);
+        spawn_list.push((*spawn.0, spawn.1.to_string()));
     }
 }
 

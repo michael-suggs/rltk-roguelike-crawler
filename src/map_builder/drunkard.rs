@@ -35,19 +35,13 @@ pub struct DrunkardsWalkBuilder {
     history: Vec<Map>,
     noise_areas: HashMap<i32, Vec<usize>>,
     settings: DrunkardSettings,
+    spawn_list: Vec<(usize, String)>,
 }
 
 impl MapBuilder for DrunkardsWalkBuilder {
     /// Generates the map
     fn build_map(&mut self) {
         self.build();
-    }
-
-    /// Spawns enemies and items on the map
-    fn spawn_entities(&mut self, ecs: &mut World) {
-        for area in self.noise_areas.iter() {
-            spawner::spawn_region(ecs, area.1, self.depth);
-        }
     }
 
     /// Returns the map itself
@@ -73,6 +67,10 @@ impl MapBuilder for DrunkardsWalkBuilder {
             self.history.push(snapshot);
         }
     }
+
+    fn get_spawn_list(&self) -> &Vec<(usize, String)> {
+        &self.spawn_list
+    }
 }
 
 impl DrunkardsWalkBuilder {
@@ -85,6 +83,7 @@ impl DrunkardsWalkBuilder {
             history: Vec::new(),
             noise_areas: HashMap::new(),
             settings,
+            spawn_list: Vec::new(),
         }
     }
 
@@ -248,6 +247,15 @@ impl DrunkardsWalkBuilder {
 
         // Generate map noise
         self.noise_areas = generate_voronoi_spawn_regions(&self.map, &mut rng);
+        for area in self.noise_areas.iter().skip(1) {
+            spawner::spawn_region(
+                &self.map,
+                &mut rng,
+                area.1,
+                self.depth,
+                &mut self.spawn_list,
+            );
+        }
     }
 }
 

@@ -1,8 +1,16 @@
 #[derive(PartialEq, Clone, Copy)]
-pub enum HorizontalPlacement { Left, Center, Right }
+pub enum HorizontalPlacement {
+    Left,
+    Center,
+    Right,
+}
 
 #[derive(PartialEq, Clone, Copy)]
-pub enum VerticalPlacement { Top, Center, Bottom }
+pub enum VerticalPlacement {
+    Top,
+    Center,
+    Bottom,
+}
 
 #[derive(PartialEq, Clone, Copy)]
 pub struct PrefabSection {
@@ -20,7 +28,7 @@ pub const UNDERGROUND_FORT: PrefabSection = PrefabSection {
 };
 
 #[allow(dead_code)]
-const RIGHT_FORT : &str = "
+const RIGHT_FORT: &str = "
   ######
   ## ###
     ^

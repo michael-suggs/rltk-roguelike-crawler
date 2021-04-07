@@ -27,17 +27,12 @@ pub struct DLABuilder {
     symmetry: Symmetry,
     brush_size: i32,
     floor_percent: f32,
+    spawn_list: Vec<(usize, String)>,
 }
 
 impl MapBuilder for DLABuilder {
     fn build_map(&mut self) {
         self.build();
-    }
-
-    fn spawn_entities(&mut self, ecs: &mut specs::World) {
-        self.noise_areas
-            .iter()
-            .for_each(|area| spawner::spawn_region(ecs, area.1, self.depth));
     }
 
     fn get_map(&self) -> Map {
@@ -59,6 +54,10 @@ impl MapBuilder for DLABuilder {
             self.history.push(snapshot);
         }
     }
+
+    fn get_spawn_list(&self) -> &Vec<(usize, String)> {
+        &self.spawn_list
+    }
 }
 
 impl DLABuilder {
@@ -74,6 +73,7 @@ impl DLABuilder {
             symmetry: rand::random(),
             brush_size: rng.roll_dice(1, 3),
             floor_percent: 0.25,
+            spawn_list: Vec::new(),
         }
     }
 
@@ -88,6 +88,7 @@ impl DLABuilder {
             symmetry: Symmetry::None,
             brush_size: 1,
             floor_percent: 0.25,
+            spawn_list: Vec::new(),
         }
     }
 
@@ -102,6 +103,7 @@ impl DLABuilder {
             symmetry: Symmetry::None,
             brush_size: 2,
             floor_percent: 0.25,
+            spawn_list: Vec::new(),
         }
     }
 
@@ -116,6 +118,7 @@ impl DLABuilder {
             symmetry: Symmetry::None,
             brush_size: 2,
             floor_percent: 0.25,
+            spawn_list: Vec::new(),
         }
     }
 
@@ -130,6 +133,7 @@ impl DLABuilder {
             symmetry: Symmetry::Horizontal,
             brush_size: 2,
             floor_percent: 0.25,
+            spawn_list: Vec::new(),
         }
     }
 
@@ -150,6 +154,16 @@ impl DLABuilder {
             DLAAlgorithm::WalkInwards => self.walk_inwards(desired_floor_tiles, &mut rng),
             DLAAlgorithm::WalkOutwards => self.walk_outwards(desired_floor_tiles, &mut rng),
             DLAAlgorithm::CentralAttractor => self.central_attractor(desired_floor_tiles, &mut rng),
+        }
+
+        for area in self.noise_areas.iter().skip(1) {
+            spawner::spawn_region(
+                &self.map,
+                &mut rng,
+                area.1,
+                self.depth,
+                &mut self.spawn_list,
+            );
         }
     }
 

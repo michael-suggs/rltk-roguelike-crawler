@@ -1,8 +1,12 @@
 use std::collections::HashMap;
 
+use rltk::RandomNumberGenerator;
+
 use crate::{
     spawner, Map, MapBuilder, Position, TileType, MAPHEIGHT, MAPWIDTH, SHOW_MAPGEN_VISUALIZER,
 };
+
+use super::common::{generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant};
 
 /// Implemented distance algorithm function definitions.
 #[derive(PartialEq, Clone, Copy)]
@@ -38,17 +42,12 @@ pub struct VoronoiBuilder {
     history: Vec<Map>,
     noise_areas: HashMap<i32, Vec<usize>>,
     diagram: VoronoiDiagram,
+    spawn_list: Vec<(usize, String)>,
 }
 
 impl MapBuilder for VoronoiBuilder {
     fn build_map(&mut self) {
         self.build()
-    }
-
-    fn spawn_entities(&mut self, ecs: &mut specs::World) {
-        self.noise_areas
-            .iter()
-            .for_each(|area| spawner::spawn_region(ecs, area.1, self.depth));
     }
 
     fn get_map(&self) -> Map {
@@ -70,6 +69,10 @@ impl MapBuilder for VoronoiBuilder {
             self.history.push(snapshot);
         }
     }
+
+    fn get_spawn_list(&self) -> &Vec<(usize, String)> {
+        &self.spawn_list
+    }
 }
 
 impl VoronoiBuilder {
@@ -81,6 +84,7 @@ impl VoronoiBuilder {
             history: Vec::new(),
             noise_areas: HashMap::new(),
             diagram: VoronoiDiagram::new(MAPWIDTH as i32, MAPHEIGHT as i32, distance_algorithm),
+            spawn_list: Vec::new(),
         }
     }
 
@@ -103,6 +107,7 @@ impl VoronoiBuilder {
     }
 
     pub fn build(&mut self) {
+        let mut rng = RandomNumberGenerator::new();
         for y in 1..self.map.height - 1 {
             for x in 1..self.map.width - 1 {
                 let idx = self.map.xy_idx(x, y);
@@ -114,6 +119,28 @@ impl VoronoiBuilder {
                 }
             }
             self.take_snapshot();
+        }
+
+        self.starting_position = Position::from(self.map.center());
+        let mut start_idx = self.map.xy_idx(self.starting_position.x, self.starting_position.y);
+        while self.map.tiles[start_idx] != TileType::Floor {
+            self.starting_position.x -= 1;
+            start_idx = self.map.xy_idx(self.starting_position.x, self.starting_position.y);
+        }
+
+        let exit_tile = remove_unreachable_areas_returning_most_distant(&mut self.map, start_idx);
+        self.map.tiles[exit_tile] = TileType::DownStairs;
+        self.take_snapshot();
+
+        self.noise_areas = generate_voronoi_spawn_regions(&self.map, &mut rng);
+        for area in self.noise_areas.iter().skip(1) {
+            spawner::spawn_region(
+                &self.map,
+                &mut rng,
+                area.1,
+                self.depth,
+                &mut self.spawn_list,
+            );
         }
     }
 }
