@@ -151,9 +151,15 @@ impl BuilderChain {
     }
 }
 
+pub enum InitialBuilders {
+    SimpleMapBuilder(SimpleMapBuilder),
+}
+
 pub trait InitialMapBuilder {
     fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuildData);
 }
+
+pub enum MetaBuilders {}
 
 pub trait MetaMapBuilder {
     fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuildData);
