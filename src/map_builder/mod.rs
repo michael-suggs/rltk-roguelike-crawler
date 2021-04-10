@@ -152,14 +152,27 @@ impl BuilderChain {
 }
 
 pub enum InitialBuilders {
-    SimpleMapBuilder(SimpleMapBuilder),
+    SimpleMap(SimpleMapBuilder),
+    BspDungeon(BspDungeonBuilder),
+    BspInterior(BspInteriorBuilder),
+    CellularAutomata(CellularAutomataBuilder),
+    DiffusionLimitedAggregation(DLABuilder),
+    DrunkardsWalk(DrunkardsWalkBuilder),
+    Maze(MazeBuilder),
+    Prefab(PrefabBuilder),
+    Voronoi(VoronoiBuilder),
+    WaveformCollapse(WaveformCollapseBuilder),
 }
 
 pub trait InitialMapBuilder {
     fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuildData);
 }
 
-pub enum MetaBuilders {}
+pub enum MetaBuilders {
+    RoomBasedSpawner(RoomBasedSpawner),
+    RoomBasedStairs(RoomBasedStairs),
+    RoomBasedStartingPosition(RoomBasedStartingPosition),
+}
 
 pub trait MetaMapBuilder {
     fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuildData);
