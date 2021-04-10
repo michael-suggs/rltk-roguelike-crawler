@@ -3,76 +3,36 @@ use std::{collections::HashMap, iter::repeat};
 use rltk::RandomNumberGenerator;
 use specs::prelude::*;
 
-use crate::{spawner, Map, MapBuilder, Position, TileType, SHOW_MAPGEN_VISUALIZER};
+use crate::{BuildData, InitialMapBuilder, Map, MapBuilder, Position, SHOW_MAPGEN_VISUALIZER, TileType, spawner};
 
 use super::common::{
     generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant,
 };
 
-pub struct CellularAutomataBuilder {
-    map: Map,
-    starting_position: Position,
-    depth: i32,
-    history: Vec<Map>,
-    noise_areas: HashMap<i32, Vec<usize>>,
-    spawn_list: Vec<(usize, String)>,
-}
+pub struct CellularAutomataBuilder {}
 
-impl MapBuilder for CellularAutomataBuilder {
-    fn build_map(&mut self) {
-        self.build();
-    }
-
-    fn get_map(&self) -> Map {
-        self.map.clone()
-    }
-
-    fn get_starting_position(&self) -> Position {
-        self.starting_position.clone()
-    }
-
-    fn get_snapshot_history(&self) -> Vec<Map> {
-        self.history.clone()
-    }
-
-    fn take_snapshot(&mut self) {
-        if SHOW_MAPGEN_VISUALIZER {
-            let mut snapshot = self.map.clone();
-            snapshot.revealed_tiles.iter_mut().for_each(|v| *v = true);
-            self.history.push(snapshot);
-        }
-    }
-
-    fn get_spawn_list(&self) -> &Vec<(usize, String)> {
-        &self.spawn_list
+impl InitialMapBuilder for CellularAutomataBuilder {
+    fn build_map(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuildData) {
+        self.build(rng, build_data);
     }
 }
 
 impl CellularAutomataBuilder {
-    pub fn new(new_depth: i32) -> CellularAutomataBuilder {
-        CellularAutomataBuilder {
-            map: Map::new(new_depth),
-            starting_position: Position { x: 0, y: 0 },
-            depth: new_depth,
-            history: Vec::new(),
-            noise_areas: HashMap::new(),
-            spawn_list: Vec::new(),
-        }
+    pub fn new(new_depth: i32) -> Box<CellularAutomataBuilder> {
+        Box::new(CellularAutomataBuilder {})
     }
 
-    fn build(&mut self) {
-        let mut rng = RandomNumberGenerator::new();
-
+    fn build(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuildData) {
         // Randomize the map.
-        for y in 1..self.map.height - 1 {
-            for x in 1..self.map.width - 1 {
+        for y in 1..build_data.map.height - 1 {
+            for x in 1..build_data.map.width - 1 {
                 let roll = rng.roll_dice(1, 100);
-                let idx = self.map.xy_idx(x, y);
+                let idx = build_data.map.xy_idx(x, y);
                 // Give a slight preference to wall tiles.
                 if roll > 55 {
-                    self.map.tiles[idx] = TileType::Floor;
+                    build_data.map.tiles[idx] = TileType::Floor;
                 } else {
-                    self.map.tiles[idx] = TileType::Wall;
+                    build_data.map.tiles[idx] = TileType::Wall;
                 }
             }
         }
@@ -80,25 +40,25 @@ impl CellularAutomataBuilder {
         // Apply cellular automata rules 15 times.
         for _ in 0..15 {
             // Copy map tiles, so we aren't overwriting the tiles we're counting.
-            let mut newtiles = self.map.tiles.clone();
+            let mut newtiles = build_data.map.tiles.clone();
             // Iterate all map cells.
-            for y in 1..self.map.height - 1 {
-                for x in 1..self.map.width - 1 {
-                    let idx = self.map.xy_idx(x, y);
+            for y in 1..build_data.map.height - 1 {
+                for x in 1..build_data.map.width - 1 {
+                    let idx = build_data.map.xy_idx(x, y);
                     let mut neighbors = 0;
                     // Indices of all neighboring tiles for `idx`.
                     let neighbor_indices: Vec<usize> = vec![
                         1,
-                        self.map.width as usize,
-                        self.map.width as usize - 1,
-                        self.map.width as usize + 1,
+                        build_data.map.width as usize,
+                        build_data.map.width as usize - 1,
+                        build_data.map.width as usize + 1,
                     ];
                     // Zip `idx` with neighbor vec and check how many neighbors are walls.
                     neighbor_indices.iter().zip(repeat(idx)).for_each(|(n, i)| {
-                        if self.map.tiles[i - n] == TileType::Wall {
+                        if build_data.map.tiles[i - n] == TileType::Wall {
                             neighbors += 1;
                         }
-                        if self.map.tiles[i + n] == TileType::Wall {
+                        if build_data.map.tiles[i + n] == TileType::Wall {
                             neighbors += 1;
                         }
                     });
@@ -111,8 +71,8 @@ impl CellularAutomataBuilder {
                 }
             }
             // End of iteration; update the map tiles, take a snapshot, and continue.
-            self.map.tiles = newtiles.clone();
-            self.take_snapshot();
+            build_data.map.tiles = newtiles.clone();
+            build_data.take_snapshot();
         }
 
         // Locate a place to start the player.

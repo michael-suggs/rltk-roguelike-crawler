@@ -7,34 +7,8 @@ use crate::{
 };
 
 use super::common::{
-    generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant,
+    DistanceAlgorithm, generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant,
 };
-
-/// Implemented distance algorithm function definitions.
-#[derive(PartialEq, Clone, Copy)]
-pub enum DistanceAlgorithm {
-    Pythagoras,
-    Manhattan,
-    Chebyshev,
-}
-
-impl DistanceAlgorithm {
-    /// Returns the [`rltk::DistanceAlg`] function indicated by the specified
-    /// enum variant.
-    fn get_func(&self) -> fn(rltk::Point, rltk::Point) -> f32 {
-        match *self {
-            DistanceAlgorithm::Pythagoras => |start: rltk::Point, end: rltk::Point| {
-                rltk::DistanceAlg::PythagorasSquared.distance2d(start, end)
-            },
-            DistanceAlgorithm::Manhattan => |start: rltk::Point, end: rltk::Point| {
-                rltk::DistanceAlg::Manhattan.distance2d(start, end)
-            },
-            DistanceAlgorithm::Chebyshev => |start: rltk::Point, end: rltk::Point| {
-                rltk::DistanceAlg::Chebyshev.distance2d(start, end)
-            },
-        }
-    }
-}
 
 /// Builer to construct a map by way of voronoi diagrams.
 pub struct VoronoiBuilder {

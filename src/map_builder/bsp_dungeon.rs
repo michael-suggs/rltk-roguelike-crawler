@@ -1,4 +1,4 @@
-use super::common::apply_room_to_map;
+use super::common::{apply_room_to_map, draw_corridor};
 use crate::{BuildData, InitialMapBuilder, Map, MapBuilder, Position, Rect, SHOW_MAPGEN_VISUALIZER, TileType, spawner};
 
 pub struct BspDungeonBuilder {
@@ -59,7 +59,7 @@ impl BspDungeonBuilder {
             let start_y = room.y1 + (rng.roll_dice(1, i32::abs(room.y1 - room.y2)) - 1);
             let end_x = next.x1 + (rng.roll_dice(1, i32::abs(next.x1 - next.x2)) - 1);
             let end_y = next.y1 + (rng.roll_dice(1, i32::abs(next.y1 - next.y2)) - 1);
-            BspDungeonBuilder::draw_corridor(&mut build_data.map, start_x, start_y, end_x, end_y);
+            draw_corridor(&mut build_data.map, start_x, start_y, end_x, end_y);
             build_data.take_snapshot();
         }
     }
@@ -142,24 +142,5 @@ impl BspDungeonBuilder {
         }
         // If none of the above, we can build it.
         return true;
-    }
-
-    fn draw_corridor(map: &mut Map, x1: i32, y1: i32, x2: i32, y2: i32) {
-        let mut x = x1;
-        let mut y = y1;
-
-        while x != x2 || y != y2 {
-            if x < x2 {
-                x += 1;
-            } else if x > x2 {
-                x -= 1;
-            } else if y < y2 {
-                y += 1;
-            } else if y > y2 {
-                y -= 1;
-            }
-            let idx = map.xy_idx(x, y);
-            map.tiles[idx] = TileType::Floor;
-        }
     }
 }

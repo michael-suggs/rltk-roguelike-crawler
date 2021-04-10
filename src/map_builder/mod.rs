@@ -19,6 +19,7 @@ use crate::{SHOW_MAPGEN_VISUALIZER, spawner};
 use super::Rect;
 use super::{components::Position, map::*};
 
+mod area_based_gen;
 mod bsp_dungeon;
 mod bsp_interior;
 mod cellular_automata;
