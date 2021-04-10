@@ -74,50 +74,5 @@ impl CellularAutomataBuilder {
             build_data.map.tiles = newtiles.clone();
             build_data.take_snapshot();
         }
-
-        // Locate a place to start the player.
-        self.locate_start();
-        // Find a place to put the exit using Dijkstra's.
-        self.locate_exit();
-
-        self.noise_areas = generate_voronoi_spawn_regions(&self.map, &mut rng);
-        for area in self.noise_areas.iter().skip(1) {
-            spawner::spawn_region(
-                &self.map,
-                &mut rng,
-                area.1,
-                self.depth,
-                &mut self.spawn_list,
-            );
-        }
-    }
-
-    /// Finds a starting location relatively close to the center of the map.
-    fn locate_start(&mut self) {
-        self.starting_position = Position::from(self.map.center());
-        let mut start_idx = self
-            .map
-            .xy_idx(self.starting_position.x, self.starting_position.y);
-        while self.map.tiles[start_idx] != TileType::Floor {
-            self.starting_position.x -= 1;
-            start_idx = self
-                .map
-                .xy_idx(self.starting_position.x, self.starting_position.y);
-        }
-    }
-
-    /// Finds an exit reasonably far away from the player's starting location.
-    fn locate_exit(&mut self) {
-        // Make a vector of the player's start (since `DijkstraMap` implements multi-start).
-        let start_idx = self
-            .map
-            .xy_idx(self.starting_position.x, self.starting_position.y);
-        self.take_snapshot();
-
-        let exit_tile = remove_unreachable_areas_returning_most_distant(&mut self.map, start_idx);
-        self.take_snapshot();
-
-        self.map.tiles[exit_tile] = TileType::DownStairs;
-        self.take_snapshot();
     }
 }
