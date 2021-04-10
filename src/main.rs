@@ -192,28 +192,29 @@ impl State {
         self.mapgen_index = 0;
         self.mapgen_timer = 0.0;
         self.mapgen_history.clear();
+        let mut rng = self.ecs.write_resource::<rltk::RandomNumberGenerator>();
+        let mut builder = map_builder::random_builder(new_depth, &mut rng);
+        builder.build_map(&mut rng);
+        std::mem::drop(rng);
 
-        let mut builder = map_builder::random_builder(new_depth);
-        builder.build_map();
-        self.mapgen_history = builder.get_snapshot_history();
-
-        let (player_x, player_y) = {
+        self.mapgen_history = builder.build_data.history.clone();
+        let player_start = {
             let mut worldmap_res = self.ecs.write_resource::<Map>();
-            *worldmap_res = builder.get_map();
-            builder.get_starting_position().into()
+            *worldmap_res = builder.build_data.map.clone();
+            builder.build_data.start.as_mut().unwrap().clone()
         };
 
         builder.spawn_entities(&mut self.ecs);
         {
             let mut player_position = self.ecs.write_resource::<Point>();
-            *player_position = Point::new(player_x, player_y);
+            *player_position = Point::new(player_start.x, player_start.y);
         }
         {
             let mut position_components = self.ecs.write_storage::<Position>();
             let player_ent = self.ecs.fetch::<Entity>();
             if let Some(player_pos_comp) = position_components.get_mut(*player_ent) {
-                player_pos_comp.x = player_x;
-                player_pos_comp.y = player_y;
+                player_pos_comp.x = player_start.x;
+                player_pos_comp.y = player_start.y;
             }
 
             let mut viewshed_comps = self.ecs.write_storage::<Viewshed>();
