@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use rltk::RandomNumberGenerator;
 use specs::World;
 
-use crate::{BuildData, InitialMapBuilder, Map, MapBuilder, Position, SHOW_MAPGEN_VISUALIZER, TileType, spawner};
+use crate::{
+    spawner, BuildData, InitialMapBuilder, Map, MapBuilder, Position, TileType,
+    SHOW_MAPGEN_VISUALIZER,
+};
 
 use super::common::{
     generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant,
@@ -32,7 +35,7 @@ impl MazeBuilder {
         let mut maze = Grid::new(
             (build_data.map.width / 2) - 2,
             (build_data.map.height / 2) - 2,
-            rng
+            rng,
         );
         maze.generate_maze(build_data);
     }

@@ -6,7 +6,10 @@ use std::collections::HashMap;
 
 use rltk::RandomNumberGenerator;
 
-use crate::{BuildData, InitialMapBuilder, Map, MapBuilder, Position, SHOW_MAPGEN_VISUALIZER, TileType, spawner};
+use crate::{
+    spawner, BuildData, InitialMapBuilder, Map, MapBuilder, Position, TileType,
+    SHOW_MAPGEN_VISUALIZER,
+};
 
 use super::common::{paint, Digger, Symmetry};
 
@@ -47,7 +50,7 @@ impl DLABuilder {
             algorithm: rand::random(),
             symmetry: rand::random(),
             brush_size: rng.roll_dice(1, 3),
-            floor_percent: 0.25
+            floor_percent: 0.25,
         })
     }
 
@@ -99,7 +102,9 @@ impl DLABuilder {
         match self.algorithm {
             DLAAlgorithm::WalkInwards => self.walk_inwards(desired_floor_tiles, rng, build_data),
             DLAAlgorithm::WalkOutwards => self.walk_outwards(desired_floor_tiles, rng, build_data),
-            DLAAlgorithm::CentralAttractor => self.central_attractor(desired_floor_tiles, rng, build_data),
+            DLAAlgorithm::CentralAttractor => {
+                self.central_attractor(desired_floor_tiles, rng, build_data)
+            }
         }
     }
 
@@ -111,7 +116,12 @@ impl DLABuilder {
         map.tiles[start_idx + map.width as usize] = TileType::Floor;
     }
 
-    fn walk_inwards(&mut self, desired_floor_tiles: usize, rng: &mut RandomNumberGenerator, build_data: &mut BuildData) {
+    fn walk_inwards(
+        &mut self,
+        desired_floor_tiles: usize,
+        rng: &mut RandomNumberGenerator,
+        build_data: &mut BuildData,
+    ) {
         let mut floor_tile_count = build_data.map.count_floor_tiles();
         while floor_tile_count < desired_floor_tiles {
             let mut drunk = TileDigger::new(
@@ -132,7 +142,12 @@ impl DLABuilder {
         }
     }
 
-    fn walk_outwards(&mut self, desired_floor_tiles: usize, rng: &mut RandomNumberGenerator, build_data: &mut BuildData) {
+    fn walk_outwards(
+        &mut self,
+        desired_floor_tiles: usize,
+        rng: &mut RandomNumberGenerator,
+        build_data: &mut BuildData,
+    ) {
         let mut floor_tile_count = build_data.map.count_floor_tiles();
         let mut drunk = TileDigger::new(
             build_data.start.unwrap().x,
@@ -154,7 +169,12 @@ impl DLABuilder {
         );
     }
 
-    fn central_attractor(&mut self, desired_floor_tiles: usize, rng: &mut RandomNumberGenerator, build_data: &mut BuildData) {
+    fn central_attractor(
+        &mut self,
+        desired_floor_tiles: usize,
+        rng: &mut RandomNumberGenerator,
+        build_data: &mut BuildData,
+    ) {
         let mut floor_tile_count = build_data.map.count_floor_tiles();
         while floor_tile_count < desired_floor_tiles {
             let mut digger = Position {

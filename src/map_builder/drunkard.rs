@@ -8,7 +8,7 @@ use super::common::{
     Symmetry,
 };
 use super::{Map, MapBuilder, Position, TileType};
-use crate::{BuildData, InitialMapBuilder, SHOW_MAPGEN_VISUALIZER, spawner};
+use crate::{spawner, BuildData, InitialMapBuilder, SHOW_MAPGEN_VISUALIZER};
 
 /// Sets where drunkards will start when generating a drunkards' walk map.
 #[derive(PartialEq, Copy, Clone)]
@@ -56,67 +56,57 @@ impl DrunkardsWalkBuilder {
 
     /// Generates a new drunkards' wak map focusing on a large, open area
     pub fn open_area() -> Box<DrunkardsWalkBuilder> {
-        DrunkardsWalkBuilder::new(
-            DrunkardSettings {
-                spawn_mode: DrunkSpawnMode::StartingPoint,
-                lifespan: 400,
-                floor_percent: 0.5,
-                brush_size: 1,
-                symmetry: Symmetry::None,
-            },
-        )
+        DrunkardsWalkBuilder::new(DrunkardSettings {
+            spawn_mode: DrunkSpawnMode::StartingPoint,
+            lifespan: 400,
+            floor_percent: 0.5,
+            brush_size: 1,
+            symmetry: Symmetry::None,
+        })
     }
 
     /// Generates a new drunkards' walk map, focusing on having open halls
     pub fn open_halls() -> Box<DrunkardsWalkBuilder> {
-        DrunkardsWalkBuilder::new(
-            DrunkardSettings {
-                spawn_mode: DrunkSpawnMode::Random,
-                lifespan: 400,
-                floor_percent: 0.5,
-                brush_size: 1,
-                symmetry: Symmetry::None,
-            },
-        )
+        DrunkardsWalkBuilder::new(DrunkardSettings {
+            spawn_mode: DrunkSpawnMode::Random,
+            lifespan: 400,
+            floor_percent: 0.5,
+            brush_size: 1,
+            symmetry: Symmetry::None,
+        })
     }
 
     /// Generates a new drunkards' walk map, focusing on winding corridors
     pub fn winding_passages() -> Box<DrunkardsWalkBuilder> {
-        DrunkardsWalkBuilder::new(
-            DrunkardSettings {
-                spawn_mode: DrunkSpawnMode::Random,
-                lifespan: 100,
-                floor_percent: 0.4,
-                brush_size: 1,
-                symmetry: Symmetry::None,
-            },
-        )
+        DrunkardsWalkBuilder::new(DrunkardSettings {
+            spawn_mode: DrunkSpawnMode::Random,
+            lifespan: 100,
+            floor_percent: 0.4,
+            brush_size: 1,
+            symmetry: Symmetry::None,
+        })
     }
 
     /// Generates a map with double-sized corridors--gives a cave-like map.
     pub fn fat_passages() -> Box<DrunkardsWalkBuilder> {
-        DrunkardsWalkBuilder::new(
-            DrunkardSettings {
-                spawn_mode: DrunkSpawnMode::Random,
-                lifespan: 100,
-                floor_percent: 0.4,
-                brush_size: 2,
-                symmetry: Symmetry::None,
-            },
-        )
+        DrunkardsWalkBuilder::new(DrunkardSettings {
+            spawn_mode: DrunkSpawnMode::Random,
+            lifespan: 100,
+            floor_percent: 0.4,
+            brush_size: 2,
+            symmetry: Symmetry::None,
+        })
     }
 
     /// Generates a winding-passages map with symmetry in both directions.
     pub fn fearful_symmetry() -> Box<DrunkardsWalkBuilder> {
-        DrunkardsWalkBuilder::new(
-            DrunkardSettings {
-                spawn_mode: DrunkSpawnMode::Random,
-                lifespan: 100,
-                floor_percent: 0.4,
-                brush_size: 1,
-                symmetry: Symmetry::Both,
-            },
-        )
+        DrunkardsWalkBuilder::new(DrunkardSettings {
+            spawn_mode: DrunkSpawnMode::Random,
+            lifespan: 100,
+            floor_percent: 0.4,
+            brush_size: 1,
+            symmetry: Symmetry::Both,
+        })
     }
 
     /// Builds the drunkards' walk map, using settings from one of the above constructors

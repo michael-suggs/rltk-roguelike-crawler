@@ -128,7 +128,7 @@ impl BuilderChain {
         self
     }
 
-    pub fn with(mut self, metabuilder: Box<dyn MetaMapBuilder>) -> Self{
+    pub fn with(mut self, metabuilder: Box<dyn MetaMapBuilder>) -> Self {
         self.builders.push(metabuilder);
         self
     }
@@ -161,74 +161,57 @@ pub enum BuilderChains {
     Maze,
     Prefab,
     Voronoi,
-    WaveformCollapse,
 }
 
 impl BuilderChains {
     pub fn match_builder(&self, new_depth: i32) -> BuilderChain {
         match *self {
-            BuilderChains::SimpleMap => {
-                BuilderChain::new(new_depth)
-                    .start_with(SimpleMapBuilder::new())
-                    .with(RoomBasedSpawner::new())
-                    .with(RoomBasedStartingPosition::new())
-                    .with(RoomBasedStairs::new())
-            }
-            BuilderChains::BspDungeon => {
-                BuilderChain::new(new_depth)
-                    .start_with(BspDungeonBuilder::new())
-                    .with(RoomBasedSpawner::new())
-                    .with(RoomBasedStartingPosition::new())
-                    .with(RoomBasedStairs::new())
-            }
-            BuilderChains::BspInterior => {
-                BuilderChain::new(new_depth)
-                    .start_with(BspInteriorBuilder::new())
-                    .with(RoomBasedSpawner::new())
-                    .with(RoomBasedStartingPosition::new())
-                    .with(RoomBasedStairs::new())
-            }
-            BuilderChains::CellularAutomata => {
-                BuilderChain::new(new_depth)
-                    .start_with(CellularAutomataBuilder::new())
-                    .with(AreaStartingPosition::new(XStart::CENTER, YStart::CENTER))
-                    .with(CullUnreachable::new())
-                    .with(VoronoiSpawning::new())
-                    .with(DistantExit::new())
-            }
-            BuilderChains::DrunkardsWalk => {
-                BuilderChain::new(new_depth)
-                    .start_with(DrunkardsWalkBuilder::random())
-                    .with(AreaStartingPosition::new(XStart::CENTER, YStart::CENTER))
-                    .with(CullUnreachable::new())
-                    .with(VoronoiSpawning::new())
-                    .with(DistantExit::new())
-            }
-            BuilderChains::DiffusionLimitedAggregation => {
-                BuilderChain::new(new_depth)
-                    .start_with(DLABuilder::new())
-                    .with(AreaStartingPosition::new(XStart::CENTER, YStart::CENTER))
-                    .with(CullUnreachable::new())
-                    .with(VoronoiSpawning::new())
-                    .with(DistantExit::new())
-            }
-            BuilderChains::Maze => {
-                BuilderChain::new(new_depth)
-                    .start_with(MazeBuilder::new())
-                    .with(AreaStartingPosition::new(XStart::CENTER, YStart::CENTER))
-                    .with(CullUnreachable::new())
-                    .with(VoronoiSpawning::new())
-                    .with(DistantExit::new())
-            }
-            BuilderChains::Voronoi => {
-                BuilderChain::new(new_depth)
-                    .start_with(VoronoiBuilder::new())
-                    .with(AreaStartingPosition::new(XStart::CENTER, YStart::CENTER))
-                    .with(CullUnreachable::new())
-                    .with(VoronoiSpawning::new())
-                    .with(DistantExit::new())
-            }
-            _ => panic!("BuilderChain yet implemented for specified builder!")
+            BuilderChains::SimpleMap => BuilderChain::new(new_depth)
+                .start_with(SimpleMapBuilder::new())
+                .with(RoomBasedSpawner::new())
+                .with(RoomBasedStartingPosition::new())
+                .with(RoomBasedStairs::new()),
+            BuilderChains::BspDungeon => BuilderChain::new(new_depth)
+                .start_with(BspDungeonBuilder::new())
+                .with(RoomBasedSpawner::new())
+                .with(RoomBasedStartingPosition::new())
+                .with(RoomBasedStairs::new()),
+            BuilderChains::BspInterior => BuilderChain::new(new_depth)
+                .start_with(BspInteriorBuilder::new())
+                .with(RoomBasedSpawner::new())
+                .with(RoomBasedStartingPosition::new())
+                .with(RoomBasedStairs::new()),
+            BuilderChains::CellularAutomata => BuilderChain::new(new_depth)
+                .start_with(CellularAutomataBuilder::new())
+                .with(AreaStartingPosition::new(XStart::CENTER, YStart::CENTER))
+                .with(CullUnreachable::new())
+                .with(VoronoiSpawning::new())
+                .with(DistantExit::new()),
+            BuilderChains::DrunkardsWalk => BuilderChain::new(new_depth)
+                .start_with(DrunkardsWalkBuilder::random())
+                .with(AreaStartingPosition::new(XStart::CENTER, YStart::CENTER))
+                .with(CullUnreachable::new())
+                .with(VoronoiSpawning::new())
+                .with(DistantExit::new()),
+            BuilderChains::DiffusionLimitedAggregation => BuilderChain::new(new_depth)
+                .start_with(DLABuilder::new())
+                .with(AreaStartingPosition::new(XStart::CENTER, YStart::CENTER))
+                .with(CullUnreachable::new())
+                .with(VoronoiSpawning::new())
+                .with(DistantExit::new()),
+            BuilderChains::Maze => BuilderChain::new(new_depth)
+                .start_with(MazeBuilder::new())
+                .with(AreaStartingPosition::new(XStart::CENTER, YStart::CENTER))
+                .with(CullUnreachable::new())
+                .with(VoronoiSpawning::new())
+                .with(DistantExit::new()),
+            BuilderChains::Voronoi => BuilderChain::new(new_depth)
+                .start_with(VoronoiBuilder::new())
+                .with(AreaStartingPosition::new(XStart::CENTER, YStart::CENTER))
+                .with(CullUnreachable::new())
+                .with(VoronoiSpawning::new())
+                .with(DistantExit::new()),
+            _ => panic!("BuilderChain yet implemented for specified builder!"),
         }
     }
 }

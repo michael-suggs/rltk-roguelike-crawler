@@ -2,7 +2,10 @@ use std::collections::HashMap;
 
 use rltk::RandomNumberGenerator;
 
-use crate::{BuildData, InitialMapBuilder, MAPHEIGHT, MAPWIDTH, Map, MapBuilder, Position, SHOW_MAPGEN_VISUALIZER, TileType, spawner};
+use crate::{
+    spawner, BuildData, InitialMapBuilder, Map, MapBuilder, Position, TileType, MAPHEIGHT,
+    MAPWIDTH, SHOW_MAPGEN_VISUALIZER,
+};
 
 use super::common::{
     generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant,
@@ -35,7 +38,11 @@ impl VoronoiBuilder {
     pub fn pythagoras(n_seeds: i32) -> Box<VoronoiBuilder> {
         Box::new(VoronoiBuilder {
             n_seeds: 64,
-            diagram: VoronoiDiagram::new(MAPWIDTH as i32, MAPHEIGHT as i32, DistanceAlgorithm::Pythagoras),
+            diagram: VoronoiDiagram::new(
+                MAPWIDTH as i32,
+                MAPHEIGHT as i32,
+                DistanceAlgorithm::Pythagoras,
+            ),
         })
     }
 
@@ -44,7 +51,11 @@ impl VoronoiBuilder {
     pub fn manhattan(n_seeds: i32) -> Box<VoronoiBuilder> {
         Box::new(VoronoiBuilder {
             n_seeds: 64,
-            diagram: VoronoiDiagram::new(MAPWIDTH as i32, MAPHEIGHT as i32, DistanceAlgorithm::Manhattan),
+            diagram: VoronoiDiagram::new(
+                MAPWIDTH as i32,
+                MAPHEIGHT as i32,
+                DistanceAlgorithm::Manhattan,
+            ),
         })
     }
 
@@ -53,7 +64,11 @@ impl VoronoiBuilder {
     pub fn chebyshev(n_seeds: i32) -> Box<VoronoiBuilder> {
         Box::new(VoronoiBuilder {
             n_seeds: 64,
-            diagram: VoronoiDiagram::new(MAPWIDTH as i32, MAPHEIGHT as i32, DistanceAlgorithm::Chebyshev),
+            diagram: VoronoiDiagram::new(
+                MAPWIDTH as i32,
+                MAPHEIGHT as i32,
+                DistanceAlgorithm::Chebyshev,
+            ),
         })
     }
 
