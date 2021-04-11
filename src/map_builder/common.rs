@@ -110,7 +110,7 @@ impl MetaMapBuilder for CullUnreachable {
 }
 
 impl CullUnreachable {
-    fn new() -> Box<CullUnreachable> {
+    pub fn new() -> Box<CullUnreachable> {
         Box::new(CullUnreachable {})
     }
 

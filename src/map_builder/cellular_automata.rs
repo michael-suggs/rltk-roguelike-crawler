@@ -21,7 +21,7 @@ impl InitialMapBuilder for CellularAutomataBuilder {
 }
 
 impl CellularAutomataBuilder {
-    pub fn new(new_depth: i32) -> Box<CellularAutomataBuilder> {
+    pub fn new() -> Box<CellularAutomataBuilder> {
         Box::new(CellularAutomataBuilder {})
     }
 

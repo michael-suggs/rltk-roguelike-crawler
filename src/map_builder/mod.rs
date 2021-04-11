@@ -2,9 +2,11 @@
 
 use specs::prelude::World;
 
+use area_based_gen::{AreaStartingPosition, VoronoiSpawning, XStart, YStart};
 use bsp_dungeon::BspDungeonBuilder;
 use bsp_interior::BspInteriorBuilder;
 use cellular_automata::CellularAutomataBuilder;
+use common::{CullUnreachable, DistantExit};
 use dla::DLABuilder;
 use drunkard::DrunkardsWalkBuilder;
 use maze::MazeBuilder;
@@ -75,12 +77,7 @@ pub trait MapBuilder {
 // }
 
 pub fn random_builder(new_depth: i32, rng: &mut rltk::RandomNumberGenerator) -> BuilderChain {
-    let mut builder = BuilderChain::new(new_depth);
-    builder.start_with(SimpleMapBuilder::new());
-    builder.with(RoomBasedSpawner::new());
-    builder.with(RoomBasedStartingPosition::new());
-    builder.with(RoomBasedStairs::new());
-    builder
+    BuilderChains::CellularAutomata.match_builder(new_depth)
 }
 
 pub struct BuildData {
@@ -123,15 +120,17 @@ impl BuilderChain {
     }
 
     /// Adds a starting map to the chain of builders.
-    pub fn start_with(&mut self, starter: Box<dyn InitialMapBuilder>) {
+    pub fn start_with(mut self, starter: Box<dyn InitialMapBuilder>) -> Self {
         match self.starter {
             None => self.starter = Some(starter),
             Some(_) => panic!("BuilderChain can only accept a single starting builder"),
         }
+        self
     }
 
-    pub fn with(&mut self, metabuilder: Box<dyn MetaMapBuilder>) {
+    pub fn with(mut self, metabuilder: Box<dyn MetaMapBuilder>) -> Self{
         self.builders.push(metabuilder);
+        self
     }
 
     pub fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator) {
@@ -152,17 +151,54 @@ impl BuilderChain {
     }
 }
 
-pub enum InitialBuilders {
-    SimpleMap(SimpleMapBuilder),
-    BspDungeon(BspDungeonBuilder),
-    BspInterior(BspInteriorBuilder),
-    CellularAutomata(CellularAutomataBuilder),
-    DiffusionLimitedAggregation(DLABuilder),
-    DrunkardsWalk(DrunkardsWalkBuilder),
-    Maze(MazeBuilder),
-    Prefab(PrefabBuilder),
-    Voronoi(VoronoiBuilder),
-    WaveformCollapse(WaveformCollapseBuilder),
+pub enum BuilderChains {
+    SimpleMap,
+    BspDungeon,
+    BspInterior,
+    CellularAutomata,
+    DiffusionLimitedAggregation,
+    DrunkardsWalk,
+    Maze,
+    Prefab,
+    Voronoi,
+    WaveformCollapse,
+}
+
+impl BuilderChains {
+    pub fn match_builder(&self, new_depth: i32) -> BuilderChain {
+        match *self {
+            BuilderChains::SimpleMap => {
+                BuilderChain::new(new_depth)
+                    .start_with(SimpleMapBuilder::new())
+                    .with(RoomBasedSpawner::new())
+                    .with(RoomBasedStartingPosition::new())
+                    .with(RoomBasedStairs::new())
+            }
+            BuilderChains::BspDungeon => {
+                BuilderChain::new(new_depth)
+                    .start_with(BspDungeonBuilder::new())
+                    .with(RoomBasedSpawner::new())
+                    .with(RoomBasedStartingPosition::new())
+                    .with(RoomBasedStairs::new())
+            }
+            BuilderChains::BspInterior => {
+                BuilderChain::new(new_depth)
+                    .start_with(BspInteriorBuilder::new())
+                    .with(RoomBasedSpawner::new())
+                    .with(RoomBasedStartingPosition::new())
+                    .with(RoomBasedStairs::new())
+            }
+            BuilderChains::CellularAutomata => {
+                BuilderChain::new(new_depth)
+                    .start_with(CellularAutomataBuilder::new())
+                    .with(AreaStartingPosition::new(XStart::CENTER, YStart::CENTER))
+                    .with(CullUnreachable::new())
+                    .with(VoronoiSpawning::new())
+                    .with(DistantExit::new())
+            }
+            _ => panic!("BuilderChain yet implemented for specified builder!")
+        }
+    }
 }
 
 pub trait InitialMapBuilder {

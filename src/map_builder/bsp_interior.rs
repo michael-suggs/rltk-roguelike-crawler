@@ -16,7 +16,7 @@ impl InitialMapBuilder for BspInteriorBuilder {
 }
 
 impl BspInteriorBuilder {
-    pub fn new(new_depth: i32) -> Box<BspInteriorBuilder> {
+    pub fn new() -> Box<BspInteriorBuilder> {
         Box::new(BspInteriorBuilder { rects: Vec::new() })
     }
 

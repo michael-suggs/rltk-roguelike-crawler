@@ -19,7 +19,7 @@ impl InitialMapBuilder for BspDungeonBuilder {
 }
 
 impl BspDungeonBuilder {
-    pub fn new(new_depth: i32) -> Box<BspDungeonBuilder> {
+    pub fn new() -> Box<BspDungeonBuilder> {
         Box::new(BspDungeonBuilder { rects: Vec::new() })
     }
 
