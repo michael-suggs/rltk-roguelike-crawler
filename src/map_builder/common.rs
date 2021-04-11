@@ -135,6 +135,50 @@ impl CullUnreachable {
     }
 }
 
+pub struct DistantExit {}
+
+impl MetaMapBuilder for DistantExit {
+    fn build_map(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuildData) {
+        self.build(rng, build_data);
+    }
+}
+
+impl DistantExit {
+    pub fn new() -> Box<DistantExit> {
+        Box::new(DistantExit {})
+    }
+
+    fn build(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuildData) {
+        let start = build_data.start.as_ref().unwrap().clone();
+        let start_idx = build_data.map.xy_idx(start.x, start.y);
+        build_data.map.populate_blocked();
+
+        let map_starts: Vec<usize> = vec![start_idx];
+        let dijkstra = rltk::DijkstraMap::new(
+            build_data.map.width as usize,
+            build_data.map.height as usize,
+            &map_starts,
+            &build_data.map,
+            1000.0,
+        );
+        let mut exit_tile = (0, 0.0f32);
+
+        for (i, tile) in build_data.map.tiles.iter_mut().enumerate() {
+            let dist_to_start = dijkstra.map[i];
+            if *tile == TileType::Floor
+                && dist_to_start != std::f32::MAX
+                && dist_to_start > exit_tile.1
+            {
+                exit_tile = (i, dist_to_start);
+            }
+        }
+
+        let stairs = exit_tile.0;
+        build_data.map.tiles[stairs] = TileType::DownStairs;
+        build_data.take_snapshot();
+    }
+}
+
 /// Removes areas from the map that are unreachable from the starting position
 /// and returns the furthest reachable point on the map from said starting position.
 ///
