@@ -204,6 +204,22 @@ impl BuilderChains {
                     .with(VoronoiSpawning::new())
                     .with(DistantExit::new())
             }
+            BuilderChains::DiffusionLimitedAggregation => {
+                BuilderChain::new(new_depth)
+                    .start_with(DLABuilder::new())
+                    .with(AreaStartingPosition::new(XStart::CENTER, YStart::CENTER))
+                    .with(CullUnreachable::new())
+                    .with(VoronoiSpawning::new())
+                    .with(DistantExit::new())
+            }
+            BuilderChains::Maze => {
+                BuilderChain::new(new_depth)
+                    .start_with(MazeBuilder::new())
+                    .with(AreaStartingPosition::new(XStart::CENTER, YStart::CENTER))
+                    .with(CullUnreachable::new())
+                    .with(VoronoiSpawning::new())
+                    .with(DistantExit::new())
+            }
             _ => panic!("BuilderChain yet implemented for specified builder!")
         }
     }
