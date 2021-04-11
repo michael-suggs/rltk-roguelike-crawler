@@ -2,8 +2,6 @@ use std::collections::HashSet;
 
 use crate::{BuildData, InitialMapBuilder, Map, MapBuilder, MetaMapBuilder, Position, SHOW_MAPGEN_VISUALIZER, TileType, spawner};
 
-use super::common::remove_unreachable_areas_returning_most_distant;
-
 use prefab_rooms::{PrefabRoom, Vault};
 use prefab_sections::{HorizontalPlacement, VerticalPlacement};
 use rltk::RandomNumberGenerator;

@@ -7,10 +7,7 @@ use crate::{
     MAPWIDTH, SHOW_MAPGEN_VISUALIZER,
 };
 
-use super::common::{
-    generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant,
-    DistanceAlgorithm,
-};
+use super::common::DistanceAlgorithm;
 
 /// Builer to construct a map by way of voronoi diagrams.
 pub struct VoronoiBuilder {

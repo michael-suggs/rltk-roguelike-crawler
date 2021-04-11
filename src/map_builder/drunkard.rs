@@ -3,10 +3,7 @@ use std::collections::HashMap;
 use rltk::RandomNumberGenerator;
 use specs::prelude::*;
 
-use super::common::{
-    generate_voronoi_spawn_regions, paint, remove_unreachable_areas_returning_most_distant, Digger,
-    Symmetry,
-};
+use super::common::{paint, Digger, Symmetry};
 use super::{Map, MapBuilder, Position, TileType};
 use crate::{spawner, BuildData, InitialMapBuilder, SHOW_MAPGEN_VISUALIZER};
 

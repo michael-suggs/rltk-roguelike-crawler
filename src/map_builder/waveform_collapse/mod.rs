@@ -10,10 +10,6 @@ use crate::{
     spawner, BuildData, Map, MapBuilder, MetaMapBuilder, Position, TileType, SHOW_MAPGEN_VISUALIZER,
 };
 
-use super::common::{
-    generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant,
-};
-
 mod common;
 mod constraints;
 mod image_loader;

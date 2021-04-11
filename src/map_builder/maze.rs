@@ -8,10 +8,6 @@ use crate::{
     SHOW_MAPGEN_VISUALIZER,
 };
 
-use super::common::{
-    generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant,
-};
-
 const TOP: usize = 0;
 const RIGHT: usize = 1;
 const BOTTOM: usize = 2;
