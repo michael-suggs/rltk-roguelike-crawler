@@ -220,6 +220,14 @@ impl BuilderChains {
                     .with(VoronoiSpawning::new())
                     .with(DistantExit::new())
             }
+            BuilderChains::Voronoi => {
+                BuilderChain::new(new_depth)
+                    .start_with(VoronoiBuilder::new())
+                    .with(AreaStartingPosition::new(XStart::CENTER, YStart::CENTER))
+                    .with(CullUnreachable::new())
+                    .with(VoronoiSpawning::new())
+                    .with(DistantExit::new())
+            }
             _ => panic!("BuilderChain yet implemented for specified builder!")
         }
     }

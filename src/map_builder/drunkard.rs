@@ -46,10 +46,10 @@ impl DrunkardsWalkBuilder {
 
     pub fn random() -> Box<DrunkardsWalkBuilder> {
         match RandomNumberGenerator::new().roll_dice(1, 5) {
-            0 => DrunkardsWalkBuilder::open_area(),
-            1 => DrunkardsWalkBuilder::open_halls(),
-            2 => DrunkardsWalkBuilder::winding_passages(),
-            3 => DrunkardsWalkBuilder::fat_passages(),
+            1 => DrunkardsWalkBuilder::open_area(),
+            2 => DrunkardsWalkBuilder::open_halls(),
+            3 => DrunkardsWalkBuilder::winding_passages(),
+            4 => DrunkardsWalkBuilder::fat_passages(),
             _ => DrunkardsWalkBuilder::fearful_symmetry(),
         }
     }

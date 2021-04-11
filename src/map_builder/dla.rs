@@ -33,10 +33,10 @@ impl InitialMapBuilder for DLABuilder {
 impl DLABuilder {
     pub fn new() -> Box<DLABuilder> {
         match RandomNumberGenerator::new().roll_dice(1, 5) {
-            0 => DLABuilder::new_random(),
-            1 => DLABuilder::new_walk_inwards(),
-            2 => DLABuilder::new_walk_outwards(),
-            3 => DLABuilder::new_central_attractor(),
+            1 => DLABuilder::new_random(),
+            2 => DLABuilder::new_walk_inwards(),
+            3 => DLABuilder::new_walk_outwards(),
+            4 => DLABuilder::new_central_attractor(),
             _ => DLABuilder::new_insectoid(),
         }
     }
