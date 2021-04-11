@@ -1,5 +1,5 @@
-use super::{Map, MapBuilder, Position, Rect, TileType, common::draw_corridor};
-use crate::{BuildData, InitialMapBuilder, SHOW_MAPGEN_VISUALIZER, spawner};
+use super::{common::draw_corridor, Map, MapBuilder, Position, Rect, TileType};
+use crate::{spawner, BuildData, InitialMapBuilder, SHOW_MAPGEN_VISUALIZER};
 use rltk::RandomNumberGenerator;
 use specs::prelude::*;
 
@@ -17,9 +17,7 @@ impl InitialMapBuilder for BspInteriorBuilder {
 
 impl BspInteriorBuilder {
     pub fn new(new_depth: i32) -> Box<BspInteriorBuilder> {
-        Box::new(BspInteriorBuilder {
-            rects: Vec::new(),
-        })
+        Box::new(BspInteriorBuilder { rects: Vec::new() })
     }
 
     /// Creates a new BspInterior map.
@@ -28,8 +26,12 @@ impl BspInteriorBuilder {
         // If any rects are hanging around, clear them
         self.rects.clear();
         // Start with the whole map as a room
-        self.rects
-            .push(Rect::new(1, 1, build_data.map.width - 2, build_data.map.height - 2));
+        self.rects.push(Rect::new(
+            1,
+            1,
+            build_data.map.width - 2,
+            build_data.map.height - 2,
+        ));
         // Build subrects for our first room
         self.add_subrects(self.rects[0], rng);
 
@@ -42,7 +44,9 @@ impl BspInteriorBuilder {
             for y in room.y1..room.y2 {
                 for x in room.x1..room.x2 {
                     let idx = build_data.map.xy_idx(x, y);
-                    if idx > 0 && idx < ((build_data.map.width * build_data.map.height) - 1) as usize {
+                    if idx > 0
+                        && idx < ((build_data.map.width * build_data.map.height) - 1) as usize
+                    {
                         build_data.map.tiles[idx] = TileType::Floor;
                     }
                 }

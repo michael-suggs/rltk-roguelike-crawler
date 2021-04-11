@@ -7,7 +7,8 @@ use crate::{
 };
 
 use super::common::{
-    DistanceAlgorithm, generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant,
+    generate_voronoi_spawn_regions, remove_unreachable_areas_returning_most_distant,
+    DistanceAlgorithm,
 };
 
 /// Builer to construct a map by way of voronoi diagrams.

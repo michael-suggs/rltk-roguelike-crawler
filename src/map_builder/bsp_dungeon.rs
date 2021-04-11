@@ -1,21 +1,26 @@
 use super::common::{apply_room_to_map, draw_corridor};
-use crate::{BuildData, InitialMapBuilder, Map, MapBuilder, Position, Rect, SHOW_MAPGEN_VISUALIZER, TileType, spawner};
+use crate::{
+    spawner, BuildData, InitialMapBuilder, Map, MapBuilder, Position, Rect, TileType,
+    SHOW_MAPGEN_VISUALIZER,
+};
 
 pub struct BspDungeonBuilder {
     rects: Vec<Rect>,
 }
 
 impl InitialMapBuilder for BspDungeonBuilder {
-    fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut crate::BuildData) {
+    fn build_map(
+        &mut self,
+        rng: &mut rltk::RandomNumberGenerator,
+        build_data: &mut crate::BuildData,
+    ) {
         self.build(rng, build_data);
     }
 }
 
 impl BspDungeonBuilder {
     pub fn new(new_depth: i32) -> Box<BspDungeonBuilder> {
-        Box::new(BspDungeonBuilder {
-            rects: Vec::new(),
-        })
+        Box::new(BspDungeonBuilder { rects: Vec::new() })
     }
 
     /// Creates a new BSP dungeon.
@@ -24,8 +29,12 @@ impl BspDungeonBuilder {
         // Clear any previously stored rectangles.
         self.rects.clear();
         // Add the entire map as the "first room" (with some added padding).
-        self.rects
-            .push(Rect::new(2, 2, build_data.map.width - 5, build_data.map.height - 5));
+        self.rects.push(Rect::new(
+            2,
+            2,
+            build_data.map.width - 5,
+            build_data.map.height - 5,
+        ));
         // Divide the first room into four quadrants.
         self.add_subrects(self.rects[0]);
 

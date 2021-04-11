@@ -1,10 +1,11 @@
-use crate::Position;
+use crate::{BuildData, MetaMapBuilder, Position};
 
 use super::{Map, Rect, TileType};
 use rand::{
     distributions::{Distribution, Standard},
     Rng,
 };
+use rltk::RandomNumberGenerator;
 use std::{
     cmp::{max, min},
     collections::HashMap,
@@ -97,6 +98,40 @@ pub fn draw_corridor(map: &mut Map, x1: i32, y1: i32, x2: i32, y2: i32) {
         }
         let idx = map.xy_idx(x, y);
         map.tiles[idx] = TileType::Floor;
+    }
+}
+
+pub struct CullUnreachable {}
+
+impl MetaMapBuilder for CullUnreachable {
+    fn build_map(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuildData) {
+        self.build(rng, build_data);
+    }
+}
+
+impl CullUnreachable {
+    fn new() -> Box<CullUnreachable> {
+        Box::new(CullUnreachable {})
+    }
+
+    fn build(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuildData) {
+        let start = build_data.start.as_ref().unwrap().clone();
+        let start_idx = build_data.map.xy_idx(start.x, start.y);
+        build_data.map.populate_blocked();
+
+        let map_starts: Vec<usize> = vec![start_idx];
+        let dijkstra = rltk::DijkstraMap::new(
+            build_data.map.width as usize,
+            build_data.map.height as usize,
+            &map_starts,
+            &build_data.map,
+            1000.0,
+        );
+        for (i, tile) in build_data.map.tiles.iter_mut().enumerate() {
+            if *tile == TileType::Floor && dijkstra.map[i] == std::f32::MAX {
+                *tile = TileType::Wall;
+            }
+        }
     }
 }
 

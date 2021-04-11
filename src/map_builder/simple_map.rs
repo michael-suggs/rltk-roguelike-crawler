@@ -1,5 +1,5 @@
 use super::{common::*, Map, MapBuilder, Rect, TileType};
-use crate::{BuildData, InitialMapBuilder, Position, SHOW_MAPGEN_VISUALIZER, spawner};
+use crate::{spawner, BuildData, InitialMapBuilder, Position, SHOW_MAPGEN_VISUALIZER};
 use rltk::RandomNumberGenerator;
 use specs::prelude::*;
 

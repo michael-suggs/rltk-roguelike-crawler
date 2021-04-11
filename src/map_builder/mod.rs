@@ -14,7 +14,7 @@ use simple_map::SimpleMapBuilder;
 use voronoi::VoronoiBuilder;
 use waveform_collapse::WaveformCollapseBuilder;
 
-use crate::{SHOW_MAPGEN_VISUALIZER, spawner};
+use crate::{spawner, SHOW_MAPGEN_VISUALIZER};
 
 use super::Rect;
 use super::{components::Position, map::*};
@@ -118,7 +118,7 @@ impl BuilderChain {
                 start: None,
                 rooms: None,
                 history: Vec::new(),
-            }
+            },
         }
     }
 
