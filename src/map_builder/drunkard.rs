@@ -8,7 +8,7 @@ use super::common::{
     Symmetry,
 };
 use super::{Map, MapBuilder, Position, TileType};
-use crate::{spawner, SHOW_MAPGEN_VISUALIZER};
+use crate::{BuildData, InitialMapBuilder, SHOW_MAPGEN_VISUALIZER, spawner};
 
 /// Sets where drunkards will start when generating a drunkards' walk map.
 #[derive(PartialEq, Copy, Clone)]
@@ -29,68 +29,34 @@ pub struct DrunkardSettings {
 
 /// Builder to construct a drunkards' walk map.
 pub struct DrunkardsWalkBuilder {
-    map: Map,
-    starting_position: Position,
-    depth: i32,
-    history: Vec<Map>,
-    noise_areas: HashMap<i32, Vec<usize>>,
     settings: DrunkardSettings,
-    spawn_list: Vec<(usize, String)>,
 }
 
-impl MapBuilder for DrunkardsWalkBuilder {
-    /// Generates the map
-    fn build_map(&mut self) {
-        self.build();
-    }
-
-    /// Returns the map itself
-    fn get_map(&self) -> Map {
-        self.map.clone()
-    }
-
-    /// Returns the player's starting position on the map
-    fn get_starting_position(&self) -> Position {
-        self.starting_position.clone()
-    }
-
-    /// Gets a vector of all map generation stages for visualization
-    fn get_snapshot_history(&self) -> Vec<Map> {
-        self.history.clone()
-    }
-
-    /// Clones the map at a timestep during generation, for later visualization
-    fn take_snapshot(&mut self) {
-        if SHOW_MAPGEN_VISUALIZER {
-            let mut snapshot = self.map.clone();
-            snapshot.revealed_tiles.iter_mut().for_each(|v| *v = true);
-            self.history.push(snapshot);
-        }
-    }
-
-    fn get_spawn_list(&self) -> &Vec<(usize, String)> {
-        &self.spawn_list
+impl InitialMapBuilder for DrunkardsWalkBuilder {
+    fn build_map(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuildData) {
+        self.build(rng, build_data);
     }
 }
 
 impl DrunkardsWalkBuilder {
     /// Generates a new drunkards' walk map with passed settings
-    pub fn new(new_depth: i32, settings: DrunkardSettings) -> DrunkardsWalkBuilder {
-        DrunkardsWalkBuilder {
-            map: Map::new(new_depth),
-            starting_position: Position { x: 0, y: 0 },
-            depth: new_depth,
-            history: Vec::new(),
-            noise_areas: HashMap::new(),
-            settings,
-            spawn_list: Vec::new(),
+    pub fn new(settings: DrunkardSettings) -> Box<DrunkardsWalkBuilder> {
+        Box::new(DrunkardsWalkBuilder { settings })
+    }
+
+    pub fn random() -> Box<DrunkardsWalkBuilder> {
+        match RandomNumberGenerator::new().roll_dice(1, 5) {
+            0 => DrunkardsWalkBuilder::open_area(),
+            1 => DrunkardsWalkBuilder::open_halls(),
+            2 => DrunkardsWalkBuilder::winding_passages(),
+            3 => DrunkardsWalkBuilder::fat_passages(),
+            _ => DrunkardsWalkBuilder::fearful_symmetry(),
         }
     }
 
     /// Generates a new drunkards' wak map focusing on a large, open area
-    pub fn open_area(new_depth: i32) -> DrunkardsWalkBuilder {
+    pub fn open_area() -> Box<DrunkardsWalkBuilder> {
         DrunkardsWalkBuilder::new(
-            new_depth,
             DrunkardSettings {
                 spawn_mode: DrunkSpawnMode::StartingPoint,
                 lifespan: 400,
@@ -102,9 +68,8 @@ impl DrunkardsWalkBuilder {
     }
 
     /// Generates a new drunkards' walk map, focusing on having open halls
-    pub fn open_halls(new_depth: i32) -> DrunkardsWalkBuilder {
+    pub fn open_halls() -> Box<DrunkardsWalkBuilder> {
         DrunkardsWalkBuilder::new(
-            new_depth,
             DrunkardSettings {
                 spawn_mode: DrunkSpawnMode::Random,
                 lifespan: 400,
@@ -116,9 +81,8 @@ impl DrunkardsWalkBuilder {
     }
 
     /// Generates a new drunkards' walk map, focusing on winding corridors
-    pub fn winding_passages(new_depth: i32) -> DrunkardsWalkBuilder {
+    pub fn winding_passages() -> Box<DrunkardsWalkBuilder> {
         DrunkardsWalkBuilder::new(
-            new_depth,
             DrunkardSettings {
                 spawn_mode: DrunkSpawnMode::Random,
                 lifespan: 100,
@@ -130,9 +94,8 @@ impl DrunkardsWalkBuilder {
     }
 
     /// Generates a map with double-sized corridors--gives a cave-like map.
-    pub fn fat_passages(new_depth: i32) -> DrunkardsWalkBuilder {
+    pub fn fat_passages() -> Box<DrunkardsWalkBuilder> {
         DrunkardsWalkBuilder::new(
-            new_depth,
             DrunkardSettings {
                 spawn_mode: DrunkSpawnMode::Random,
                 lifespan: 100,
@@ -144,9 +107,8 @@ impl DrunkardsWalkBuilder {
     }
 
     /// Generates a winding-passages map with symmetry in both directions.
-    pub fn fearful_symmetry(new_depth: i32) -> DrunkardsWalkBuilder {
+    pub fn fearful_symmetry() -> Box<DrunkardsWalkBuilder> {
         DrunkardsWalkBuilder::new(
-            new_depth,
             DrunkardSettings {
                 spawn_mode: DrunkSpawnMode::Random,
                 lifespan: 100,
@@ -159,21 +121,17 @@ impl DrunkardsWalkBuilder {
 
     /// Builds the drunkards' walk map, using settings from one of the above constructors
     #[allow(clippy::map_entry)]
-    fn build(&mut self) {
-        let mut rng = RandomNumberGenerator::new();
-
-        self.starting_position = Position::from(self.map.center());
-        let start_idx = self
-            .map
-            .xy_idx(self.starting_position.x, self.starting_position.y);
-        self.map.tiles[start_idx] = TileType::Floor;
+    fn build(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuildData) {
+        let start = Position::from(build_data.map.center());
+        let start_idx = build_data.map.xy_idx(start.x, start.y);
+        build_data.map.tiles[start_idx] = TileType::Floor;
 
         // Total number of tiles on the map
-        let total_tiles = self.map.width * self.map.height;
+        let total_tiles = build_data.map.width * build_data.map.height;
         // Number of floor tiles we want on the generated map
         let desired_floor_tiles = (self.settings.floor_percent * total_tiles as f32) as usize;
         // Current number of floor tiles on the map
-        let mut floor_tile_count = self
+        let mut floor_tile_count = build_data
             .map
             .tiles
             .iter()
@@ -193,19 +151,19 @@ impl DrunkardsWalkBuilder {
             match self.settings.spawn_mode {
                 DrunkSpawnMode::StartingPoint => {
                     // Start at the player's starting position
-                    drunk_x = self.starting_position.x;
-                    drunk_y = self.starting_position.y;
+                    drunk_x = start.x;
+                    drunk_y = start.y;
                 }
                 DrunkSpawnMode::Random => {
                     if digger_count == 0 {
                         // If this is the first drunkard, always start at the player's start
                         // to ensure the player has room to spawn and move.
-                        drunk_x = self.starting_position.x;
-                        drunk_y = self.starting_position.y;
+                        drunk_x = start.x;
+                        drunk_y = start.y;
                     } else {
                         // If not the first drunkard, start them somewhere on the map
-                        drunk_x = rng.roll_dice(1, self.map.width - 3) + 1;
-                        drunk_y = rng.roll_dice(1, self.map.height - 3) + 1;
+                        drunk_x = rng.roll_dice(1, build_data.map.width - 3) + 1;
+                        drunk_y = rng.roll_dice(1, build_data.map.height - 3) + 1;
                     }
                 }
             }
@@ -215,46 +173,26 @@ impl DrunkardsWalkBuilder {
 
             // This actually does the map generation, staggering the drunk around
             // the map and digging until its life expires.
-            drunk.stagger(&mut self.map, &mut rng);
+            drunk.stagger(&mut build_data.map, rng);
             if drunk.did_something {
-                self.take_snapshot();
+                build_data.take_snapshot();
                 active_digger_count += 1;
             }
 
             digger_count += 1;
             // Set all the drunk's marked (dug) tiles to floor tiles
-            self.map.tiles.iter_mut().for_each(|tile| {
+            build_data.map.tiles.iter_mut().for_each(|tile| {
                 if *tile == TileType::DownStairs {
                     *tile = TileType::Floor;
                 }
             });
             // Get the new floor tile count before finishing the loop
-            floor_tile_count = self
+            floor_tile_count = build_data
                 .map
                 .tiles
                 .iter()
                 .filter(|t| **t == TileType::Floor)
                 .count();
-        }
-
-        // Get rid of unreachable areas and get the furthest reachable tile
-        let exit_tile = remove_unreachable_areas_returning_most_distant(&mut self.map, start_idx);
-        self.take_snapshot();
-
-        // Set the furthest reachable tile to be the stairs down to the next level
-        self.map.tiles[exit_tile] = TileType::DownStairs;
-        self.take_snapshot();
-
-        // Generate map noise
-        self.noise_areas = generate_voronoi_spawn_regions(&self.map, &mut rng);
-        for area in self.noise_areas.iter().skip(1) {
-            spawner::spawn_region(
-                &self.map,
-                &mut rng,
-                area.1,
-                self.depth,
-                &mut self.spawn_list,
-            );
         }
     }
 }

@@ -196,6 +196,14 @@ impl BuilderChains {
                     .with(VoronoiSpawning::new())
                     .with(DistantExit::new())
             }
+            BuilderChains::DrunkardsWalk => {
+                BuilderChain::new(new_depth)
+                    .start_with(DrunkardsWalkBuilder::random())
+                    .with(AreaStartingPosition::new(XStart::CENTER, YStart::CENTER))
+                    .with(CullUnreachable::new())
+                    .with(VoronoiSpawning::new())
+                    .with(DistantExit::new())
+            }
             _ => panic!("BuilderChain yet implemented for specified builder!")
         }
     }
@@ -203,12 +211,6 @@ impl BuilderChains {
 
 pub trait InitialMapBuilder {
     fn build_map(&mut self, rng: &mut rltk::RandomNumberGenerator, build_data: &mut BuildData);
-}
-
-pub enum MetaBuilders {
-    RoomBasedSpawner(RoomBasedSpawner),
-    RoomBasedStairs(RoomBasedStairs),
-    RoomBasedStartingPosition(RoomBasedStartingPosition),
 }
 
 pub trait MetaMapBuilder {
