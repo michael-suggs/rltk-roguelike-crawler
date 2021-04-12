@@ -211,6 +211,17 @@ impl BuilderChains {
                 .with(CullUnreachable::new())
                 .with(VoronoiSpawning::new())
                 .with(DistantExit::new()),
+            BuilderChains::Prefab => BuilderChain::new(new_depth)
+                .start_with(VoronoiBuilder::pythagoras(64))
+                .with(WaveformCollapseBuilder::new())
+                .with(PrefabBuilder::room_vaults())
+                .with(AreaStartingPosition::new(XStart::CENTER, YStart::CENTER))
+                .with(CullUnreachable::new())
+                .with(VoronoiSpawning::new())
+                .with(PrefabBuilder::sectional(
+                    prefab_builder::prefab_sections::UNDERGROUND_FORT,
+                ))
+                .with(DistantExit::new()),
             _ => panic!("BuilderChain yet implemented for specified builder!"),
         }
     }

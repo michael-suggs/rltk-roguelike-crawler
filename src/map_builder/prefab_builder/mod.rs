@@ -1,14 +1,17 @@
 use std::collections::HashSet;
 
-use crate::{BuildData, InitialMapBuilder, Map, MapBuilder, MetaMapBuilder, Position, SHOW_MAPGEN_VISUALIZER, TileType, spawner};
+use crate::{
+    spawner, BuildData, InitialMapBuilder, Map, MapBuilder, MetaMapBuilder, Position, TileType,
+    SHOW_MAPGEN_VISUALIZER,
+};
 
-use prefab_rooms::{PrefabRoom, Vault};
+use prefab_rooms::PrefabRoom;
 use prefab_sections::{HorizontalPlacement, VerticalPlacement};
 use rltk::RandomNumberGenerator;
 
-mod prefab_levels;
-mod prefab_rooms;
-mod prefab_sections;
+pub mod prefab_levels;
+pub mod prefab_rooms;
+pub mod prefab_sections;
 
 #[allow(dead_code)]
 #[derive(PartialEq, Clone)]
@@ -50,16 +53,20 @@ impl PrefabBuilder {
 
     pub fn rex_level(template: &'static str) -> Box<PrefabBuilder> {
         Box::new(PrefabBuilder {
-            mode: PrefabMode::RexLevel { template }
+            mode: PrefabMode::RexLevel { template },
         })
     }
 
     pub fn constant(level: prefab_levels::PrefabLevel) -> Box<PrefabBuilder> {
-        Box::new(PrefabBuilder { mode: PrefabMode::Constant { level }})
+        Box::new(PrefabBuilder {
+            mode: PrefabMode::Constant { level },
+        })
     }
 
     pub fn sectional(section: prefab_sections::PrefabSection) -> Box<PrefabBuilder> {
-        Box::new(PrefabBuilder { mode: PrefabMode::Sectional { section }})
+        Box::new(PrefabBuilder {
+            mode: PrefabMode::Sectional { section },
+        })
     }
 
     fn build(&mut self, rng: &mut RandomNumberGenerator, build_data: &mut BuildData) {
@@ -102,7 +109,9 @@ impl PrefabBuilder {
             }
             '!' => {
                 build_data.map.tiles[idx] = TileType::Floor;
-                build_data.spawn_list.push((idx, "Health Potion".to_string()));
+                build_data
+                    .spawn_list
+                    .push((idx, "Health Potion".to_string()));
             }
             _ => rltk::console::log(format!("Unknown glyph when loading map: {}", ch)),
         }
@@ -142,7 +151,11 @@ impl PrefabBuilder {
         let mut i = 0;
         for y in 0..level.height {
             for x in 0..level.width {
-                if x > 0 && y > 0 && x < build_data.map.width as usize && y < build_data.map.height as usize {
+                if x > 0
+                    && y > 0
+                    && x < build_data.map.width as usize
+                    && y < build_data.map.height as usize
+                {
                     let idx = build_data.map.xy_idx(x as i32, y as i32);
                     self.char_to_map(string_vec[i], idx, build_data);
                 }
@@ -151,7 +164,12 @@ impl PrefabBuilder {
         }
     }
 
-    fn apply_sectional(&mut self, section: &prefab_sections::PrefabSection, rng: &mut RandomNumberGenerator, build_data: &mut BuildData) {
+    fn apply_sectional(
+        &mut self,
+        section: &prefab_sections::PrefabSection,
+        rng: &mut RandomNumberGenerator,
+        build_data: &mut BuildData,
+    ) {
         let string_vec = PrefabBuilder::read_ascii_to_vec(
             prefab_sections::get_template_str(section.to_owned()).as_str(),
         );
@@ -166,18 +184,24 @@ impl PrefabBuilder {
             VerticalPlacement::Bottom => (build_data.map.height - 1) - section.height as i32,
         };
 
-        self.apply_previous_iteration(|x, y, e| {
-            x < chunk_x
-                || x > (chunk_x + section.width as i32)
-                || y < chunk_y
-                || y > (chunk_y + section.height as i32)
-        }, rng, build_data);
+        self.apply_previous_iteration(
+            |x, y, e| {
+                x < chunk_x
+                    || x > (chunk_x + section.width as i32)
+                    || y < chunk_y
+                    || y > (chunk_y + section.height as i32)
+            },
+            rng,
+            build_data,
+        );
 
         let mut i = 0;
         for y in 0..section.height {
             for x in 0..section.width {
                 if build_data.map.in_bounds(x as i32, 0, y as i32, 0) {
-                    let idx = build_data.map.xy_idx(x as i32 + chunk_x, y as i32 + chunk_y);
+                    let idx = build_data
+                        .map
+                        .xy_idx(x as i32 + chunk_x, y as i32 + chunk_y);
                     if i < string_vec.len() {
                         self.char_to_map(string_vec[i], idx, build_data);
                     }
@@ -202,7 +226,9 @@ impl PrefabBuilder {
         ];
         let possible_vaults: Vec<&PrefabRoom> = master_vault_list
             .iter()
-            .filter(|v| build_data.map.depth >= v.first_depth && build_data.map.depth <= v.last_depth)
+            .filter(|v| {
+                build_data.map.depth >= v.first_depth && build_data.map.depth <= v.last_depth
+            })
             .collect();
         if possible_vaults.is_empty() {
             return;
@@ -282,8 +308,12 @@ impl PrefabBuilder {
         }
     }
 
-    fn apply_previous_iteration<F>(&mut self, mut filter: F, rng: &mut RandomNumberGenerator, build_data: &mut BuildData)
-    where
+    fn apply_previous_iteration<F>(
+        &mut self,
+        mut filter: F,
+        rng: &mut RandomNumberGenerator,
+        build_data: &mut BuildData,
+    ) where
         F: FnMut(i32, i32, &(usize, String)) -> bool,
     {
         let width = build_data.map.width;
