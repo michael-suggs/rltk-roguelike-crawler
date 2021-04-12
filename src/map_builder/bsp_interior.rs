@@ -1,4 +1,4 @@
-use super::{common::draw_corridor, Map, MapBuilder, Position, Rect, TileType};
+use super::{common::draw_corridor, Map, Position, Rect, TileType};
 use crate::{spawner, BuildData, InitialMapBuilder, SHOW_MAPGEN_VISUALIZER};
 use rltk::RandomNumberGenerator;
 use specs::prelude::*;

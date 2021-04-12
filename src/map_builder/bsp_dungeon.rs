@@ -1,7 +1,6 @@
 use super::common::{apply_room_to_map, draw_corridor};
 use crate::{
-    spawner, BuildData, InitialMapBuilder, Map, MapBuilder, Position, Rect, TileType,
-    SHOW_MAPGEN_VISUALIZER,
+    spawner, BuildData, InitialMapBuilder, Map, Position, Rect, TileType, SHOW_MAPGEN_VISUALIZER,
 };
 
 pub struct BspDungeonBuilder {

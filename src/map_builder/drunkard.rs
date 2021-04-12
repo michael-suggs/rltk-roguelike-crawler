@@ -4,7 +4,7 @@ use rltk::RandomNumberGenerator;
 use specs::prelude::*;
 
 use super::common::{paint, Digger, Symmetry};
-use super::{Map, MapBuilder, Position, TileType};
+use super::{Map, Position, TileType};
 use crate::{spawner, BuildData, InitialMapBuilder, SHOW_MAPGEN_VISUALIZER};
 
 /// Sets where drunkards will start when generating a drunkards' walk map.

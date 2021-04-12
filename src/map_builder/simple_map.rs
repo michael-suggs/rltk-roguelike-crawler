@@ -1,46 +1,7 @@
-use super::{common::*, Map, MapBuilder, Rect, TileType};
+use super::{common::*, Map, Rect, TileType};
 use crate::{spawner, BuildData, InitialMapBuilder, Position, SHOW_MAPGEN_VISUALIZER};
 use rltk::RandomNumberGenerator;
 use specs::prelude::*;
-
-// pub struct SimpleMapBuilder {
-//     map: Map,
-//     starting_position: Position,
-//     depth: i32,
-//     rooms: Vec<Rect>,
-//     history: Vec<Map>,
-//     spawn_list: Vec<(usize, String)>,
-// }
-
-// impl MapBuilder for SimpleMapBuilder {
-//     fn build_map(&mut self) {
-//         self.rooms_and_corridors();
-//     }
-
-//     fn get_spawn_list(&self) -> &Vec<(usize, String)> {
-//         &self.spawn_list
-//     }
-
-//     fn get_map(&self) -> Map {
-//         self.map.clone()
-//     }
-
-//     fn get_starting_position(&self) -> Position {
-//         self.starting_position.clone()
-//     }
-
-//     fn get_snapshot_history(&self) -> Vec<Map> {
-//         self.history.clone()
-//     }
-
-//     fn take_snapshot(&mut self) {
-//         if SHOW_MAPGEN_VISUALIZER {
-//             let mut snapshot = self.map.clone();
-//             snapshot.revealed_tiles.iter_mut().for_each(|v| *v = true);
-//             self.history.push(snapshot);
-//         }
-//     }
-// }
 
 pub struct SimpleMapBuilder {}
 
@@ -95,19 +56,5 @@ impl SimpleMapBuilder {
             }
         }
         build_data.rooms = Some(rooms);
-
-        // let stairs_pos = rooms.last().unwrap().center();
-        // let stairs_idx = build_data.map.xy_idx(stairs_pos.0, stairs_pos.1);
-        // build_data.map.tiles[stairs_idx] = TileType::DownStairs;
-
-        // let start_pos = rooms[0].center();
-        // build_data.starting_position = Position {
-        //     x: start_pos.0,
-        //     y: start_pos.1,
-        // };
-
-        // for room in self.rooms.iter().skip(1) {
-        //     spawner::spawn_room(&self.map, &mut rng, room, self.depth, &mut self.spawn_list);
-        // }
     }
 }

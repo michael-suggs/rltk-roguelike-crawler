@@ -4,8 +4,7 @@ use rltk::RandomNumberGenerator;
 use specs::prelude::*;
 
 use crate::{
-    spawner, BuildData, InitialMapBuilder, Map, MapBuilder, Position, TileType,
-    SHOW_MAPGEN_VISUALIZER,
+    spawner, BuildData, InitialMapBuilder, Map, Position, TileType, SHOW_MAPGEN_VISUALIZER,
 };
 
 pub struct CellularAutomataBuilder {}

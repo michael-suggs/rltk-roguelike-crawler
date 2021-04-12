@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::{
-    spawner, BuildData, InitialMapBuilder, Map, MapBuilder, MetaMapBuilder, Position, TileType,
+    spawner, BuildData, InitialMapBuilder, Map, MetaMapBuilder, Position, TileType,
     SHOW_MAPGEN_VISUALIZER,
 };
 

@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use rltk::RandomNumberGenerator;
 
 use crate::{
-    spawner, BuildData, InitialMapBuilder, Map, MapBuilder, Position, TileType, MAPHEIGHT,
-    MAPWIDTH, SHOW_MAPGEN_VISUALIZER,
+    spawner, BuildData, InitialMapBuilder, Map, Position, TileType, MAPHEIGHT, MAPWIDTH,
+    SHOW_MAPGEN_VISUALIZER,
 };
 
 use super::common::DistanceAlgorithm;

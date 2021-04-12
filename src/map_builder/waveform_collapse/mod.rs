@@ -6,9 +6,7 @@ use image_loader::load_rex_map;
 use rltk::RandomNumberGenerator;
 use solver::Solver;
 
-use crate::{
-    spawner, BuildData, Map, MapBuilder, MetaMapBuilder, Position, TileType, SHOW_MAPGEN_VISUALIZER,
-};
+use crate::{spawner, BuildData, Map, MetaMapBuilder, Position, TileType, SHOW_MAPGEN_VISUALIZER};
 
 mod common;
 mod constraints;
