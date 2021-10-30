@@ -1,3 +1,5 @@
+#![allow(warnings, unused)]
+
 extern crate serde;
 
 use rltk::{GameState, Point, Rltk};
